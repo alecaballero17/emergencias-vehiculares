@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads (keep folder structure)
+backend/uploads/images/*
+backend/uploads/audio/*
+!backend/uploads/images/.gitkeep
+!backend/uploads/audio/.gitkeep
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Alembic
+*.db
