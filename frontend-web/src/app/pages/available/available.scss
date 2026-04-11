@@ -1,0 +1,124 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  h2 { margin: 0; color: #1e293b; }
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+
+  &-primary { background: #2563eb; color: #fff; &:hover { background: #1d4ed8; } }
+  &-outline { background: #fff; border: 1px solid #d1d5db; color: #374151; &:hover { background: #f3f4f6; } }
+  &-sm { padding: 6px 14px; font-size: 12px; text-decoration: none; }
+}
+
+.incident-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.incident-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.type-badge {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.priority-tag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.priority-critical { background: #fef2f2; color: #dc2626; }
+.priority-high { background: #fff7ed; color: #ea580c; }
+.priority-medium { background: #fffbeb; color: #d97706; }
+.priority-low { background: #f0fdf4; color: #16a34a; }
+
+.card-body {
+  padding: 16px;
+  flex: 1;
+
+  .description {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #374151;
+  }
+
+  .address {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #6b7280;
+  }
+}
+
+.ai-summary {
+  background: #eff6ff;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+
+  .ai-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #374151;
+  }
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid #f3f4f6;
+
+  .time {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+}
+
+.loading, .empty-state {
+  text-align: center;
+  padding: 48px;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 12px;
+}

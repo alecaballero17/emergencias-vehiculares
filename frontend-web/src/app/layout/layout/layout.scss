@@ -1,0 +1,141 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f4f6;
+}
+
+// Sidebar
+.sidebar {
+  width: 250px;
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-collapsed .sidebar {
+  width: 64px;
+}
+
+.sidebar-header {
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #334155;
+
+  .logo { font-size: 28px; }
+  .brand {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+  text-align: left;
+
+  &:hover {
+    background: #334155;
+    color: #fff;
+  }
+
+  &.active {
+    background: #2563eb;
+    color: #fff;
+  }
+}
+
+.nav-icon { font-size: 18px; }
+.nav-label { white-space: nowrap; }
+
+.badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid #334155;
+}
+
+.logout-btn {
+  color: #f87171 !important;
+  &:hover { background: #451a1a !important; }
+}
+
+// Main
+.main-content {
+  flex: 1;
+  margin-left: 250px;
+  transition: margin-left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 64px;
+}
+
+.topbar {
+  background: #fff;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.toggle-btn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.workshop-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.content {
+  padding: 24px;
+  flex: 1;
+}

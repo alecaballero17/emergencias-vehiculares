@@ -1,0 +1,50 @@
+<div class="app-layout" [class.sidebar-collapsed]="!sidebarOpen">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo">🚗</span>
+      @if (sidebarOpen) {
+        <span class="brand">Emergencias</span>
+      }
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (item of menuItems; track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">{{ item.icon }}</span>
+          @if (sidebarOpen) {
+            <span class="nav-label">{{ item.label }}</span>
+            @if (item.route === '/notifications' && unreadCount > 0) {
+              <span class="badge">{{ unreadCount }}</span>
+            }
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-item logout-btn" (click)="logout()">
+        <span class="nav-icon">🚪</span>
+        @if (sidebarOpen) {
+          <span class="nav-label">Cerrar Sesión</span>
+        }
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <button class="toggle-btn" (click)="toggleSidebar()">☰</button>
+      <div class="topbar-info">
+        @if (workshop) {
+          <span class="workshop-name">{{ workshop.name }}</span>
+        }
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

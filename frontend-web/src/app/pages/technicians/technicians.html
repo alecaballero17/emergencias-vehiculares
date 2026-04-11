@@ -1,0 +1,69 @@
+<div class="page">
+  <div class="page-header">
+    <h2>👨‍🔧 Técnicos</h2>
+    <button class="btn btn-primary" (click)="openNew()">+ Agregar Técnico</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Cargando...</div>
+  } @else if (technicians.length === 0) {
+    <div class="empty">No hay técnicos registrados.</div>
+  } @else {
+    <div class="tech-grid">
+      @for (tech of technicians; track tech.id) {
+        <div class="tech-card" [class.unavailable]="!tech.is_available">
+          <div class="tech-header">
+            <span class="tech-avatar">👨‍🔧</span>
+            <div>
+              <h4>{{ tech.name }}</h4>
+              <span class="tech-phone">{{ tech.phone }}</span>
+            </div>
+            <span class="availability-badge" [class.available]="tech.is_available" [class.not-available]="!tech.is_available">
+              {{ tech.is_available ? 'Disponible' : 'No disponible' }}
+            </span>
+          </div>
+          <div class="tech-specialties">
+            @for (spec of tech.specialties; track spec) {
+              <span class="specialty-tag">{{ spec }}</span>
+            }
+          </div>
+          <div class="tech-actions">
+            <button class="btn btn-sm btn-outline" (click)="toggleAvailability(tech)">
+              {{ tech.is_available ? '🔴 Desactivar' : '🟢 Activar' }}
+            </button>
+            <button class="btn btn-sm btn-outline" (click)="openEdit(tech)">✏️ Editar</button>
+            <button class="btn btn-sm btn-danger-outline" (click)="delete(tech)">🗑️</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal Form -->
+  @if (showForm) {
+    <div class="modal-overlay" (click)="showForm = false">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h3>{{ editingId ? 'Editar' : 'Nuevo' }} Técnico</h3>
+        @if (error) {
+          <div class="alert-error">{{ error }}</div>
+        }
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" [(ngModel)]="form.name" class="form-input" placeholder="Nombre completo">
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" [(ngModel)]="form.phone" class="form-input" placeholder="+591 7XXXXXXX">
+        </div>
+        <div class="form-group">
+          <label>Especialidades (separar con comas)</label>
+          <input type="text" [(ngModel)]="form.specialties" class="form-input" placeholder="batería, motor, llantas">
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" (click)="showForm = false">Cancelar</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="!form.name || !form.phone">Guardar</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

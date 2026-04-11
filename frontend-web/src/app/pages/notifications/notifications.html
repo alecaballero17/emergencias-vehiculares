@@ -1,0 +1,22 @@
+<div class="page">
+  <h2>🔔 Notificaciones</h2>
+
+  @if (loading) {
+    <div class="loading">Cargando...</div>
+  } @else if (notifications.length === 0) {
+    <div class="empty">No hay notificaciones.</div>
+  } @else {
+    <div class="notifications-list">
+      @for (n of notifications; track n.id) {
+        <div class="notification-item" [class.unread]="!n.is_read" (click)="markRead(n)">
+          <div class="notification-icon">{{ n.is_read ? '📨' : '🔔' }}</div>
+          <div class="notification-content">
+            <h4>{{ n.title }}</h4>
+            <p>{{ n.message }}</p>
+            <span class="notification-time">{{ n.created_at | date:'medium' }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

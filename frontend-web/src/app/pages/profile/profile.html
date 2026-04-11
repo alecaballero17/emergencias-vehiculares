@@ -1,0 +1,41 @@
+<div class="page">
+  <h2>⚙️ Perfil del Taller</h2>
+
+  @if (loading) {
+    <div class="loading">Cargando...</div>
+  } @else {
+    <div class="profile-card">
+      @if (success) {
+        <div class="alert alert-success">{{ success }}</div>
+      }
+      @if (error) {
+        <div class="alert alert-error">{{ error }}</div>
+      }
+
+      <div class="form-group">
+        <label>Nombre del Taller</label>
+        <input type="text" [(ngModel)]="form.name" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="text" [(ngModel)]="form.phone" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" [(ngModel)]="form.address" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Capacidad</label>
+        <input type="number" [(ngModel)]="form.capacity" class="form-input" min="1">
+      </div>
+      <div class="form-group">
+        <label>Especialidades (separar con comas)</label>
+        <input type="text" [(ngModel)]="form.specialties" class="form-input" placeholder="batería, motor, llantas, remolque">
+      </div>
+
+      <button class="btn btn-primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
+      </button>
+    </div>
+  }
+</div>

@@ -1,0 +1,67 @@
+<div class="dashboard">
+  <h2>Dashboard</h2>
+
+  <div class="stats-grid">
+    <div class="stat-card available">
+      <div class="stat-icon">🆘</div>
+      <div class="stat-info">
+        <span class="stat-value">{{ availableCount }}</span>
+        <span class="stat-label">Disponibles</span>
+      </div>
+    </div>
+    <div class="stat-card active">
+      <div class="stat-icon">⚡</div>
+      <div class="stat-info">
+        <span class="stat-value">{{ activeCount }}</span>
+        <span class="stat-label">Activos</span>
+      </div>
+    </div>
+    <div class="stat-card completed">
+      <div class="stat-icon">✅</div>
+      <div class="stat-info">
+        <span class="stat-value">{{ completedCount }}</span>
+        <span class="stat-label">Completados</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h3>Incidentes Recientes</h3>
+      <a routerLink="/incidents" class="link">Ver todos →</a>
+    </div>
+
+    @if (loading) {
+      <div class="loading">Cargando...</div>
+    } @else if (recentIncidents.length === 0) {
+      <div class="empty">No hay incidentes asignados aún.</div>
+    } @else {
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tipo</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inc of recentIncidents; track inc.id) {
+              <tr>
+                <td>#{{ inc.id }}</td>
+                <td>{{ getTypeLabel(inc.incident_type) }}</td>
+                <td><span class="priority-tag" [class]="getPriorityClass(inc.priority)">{{ inc.priority }}</span></td>
+                <td><span class="status-tag">{{ getStatusLabel(inc.status) }}</span></td>
+                <td>{{ inc.created_at | date:'short' }}</td>
+                <td><a [routerLink]="['/incidents', inc.id]" class="btn btn-sm">Ver</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

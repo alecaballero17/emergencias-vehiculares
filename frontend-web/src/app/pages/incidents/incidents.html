@@ -1,0 +1,48 @@
+<div class="page">
+  <div class="page-header">
+    <h2>📋 Mis Incidentes</h2>
+    <div class="filters">
+      <select [(ngModel)]="statusFilter" (change)="loadIncidents()" class="form-select">
+        <option value="">Todos</option>
+        <option value="assigned">Asignados</option>
+        <option value="in_progress">En Proceso</option>
+        <option value="completed">Completados</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Cargando...</div>
+  } @else if (incidents.length === 0) {
+    <div class="empty">No se encontraron incidentes.</div>
+  } @else {
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+            <th>Dirección</th>
+            <th>Fecha</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inc of incidents; track inc.id) {
+            <tr>
+              <td>#{{ inc.id }}</td>
+              <td>{{ getTypeLabel(inc.incident_type) }}</td>
+              <td><span class="priority-tag priority-{{ inc.priority }}">{{ inc.priority }}</span></td>
+              <td><span class="status-tag status-{{ inc.status }}">{{ getStatusLabel(inc.status) }}</span></td>
+              <td>{{ inc.address || 'Sin dirección' }}</td>
+              <td>{{ inc.created_at | date:'short' }}</td>
+              <td><a [routerLink]="['/incidents', inc.id]" class="btn btn-sm">Ver</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

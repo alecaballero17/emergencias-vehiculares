@@ -1,0 +1,44 @@
+<div class="page">
+  <div class="page-header">
+    <h2>🆘 Incidentes Disponibles</h2>
+    <button class="btn btn-outline" (click)="loadIncidents()">🔄 Actualizar</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Cargando incidentes...</div>
+  } @else if (incidents.length === 0) {
+    <div class="empty-state">
+      <span class="empty-icon">📭</span>
+      <p>No hay incidentes disponibles en este momento.</p>
+    </div>
+  } @else {
+    <div class="incident-grid">
+      @for (inc of incidents; track inc.id) {
+        <div class="incident-card">
+          <div class="card-header">
+            <span class="type-badge">{{ getTypeLabel(inc.incident_type) }}</span>
+            <span class="priority-tag" [class]="getPriorityClass(inc.priority)">{{ inc.priority }}</span>
+          </div>
+          <div class="card-body">
+            @if (inc.description) {
+              <p class="description">{{ inc.description }}</p>
+            }
+            @if (inc.address) {
+              <p class="address">📍 {{ inc.address }}</p>
+            }
+            @if (inc.ai_summary) {
+              <div class="ai-summary">
+                <span class="ai-tag">🤖 IA</span>
+                <p>{{ inc.ai_summary | slice:0:120 }}...</p>
+              </div>
+            }
+          </div>
+          <div class="card-footer">
+            <span class="time">{{ timeAgo(inc.created_at) }}</span>
+            <a [routerLink]="['/incidents', inc.id]" class="btn btn-primary btn-sm">Ver detalle</a>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

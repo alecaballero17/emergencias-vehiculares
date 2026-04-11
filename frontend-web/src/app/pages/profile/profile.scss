@@ -1,0 +1,30 @@
+h2 { margin: 0 0 24px; color: #1e293b; }
+
+.profile-card {
+  background: #fff; border-radius: 12px; padding: 24px; max-width: 600px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.form-group {
+  margin-bottom: 16px;
+  label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: #374151; }
+}
+
+.form-input {
+  width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;
+  &:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+}
+
+.btn {
+  padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+  &-primary { background: #2563eb; color: #fff; &:hover { background: #1d4ed8; } }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.alert {
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
+  &-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  &-error { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
+}
+
+.loading { text-align: center; padding: 48px; color: #6b7280; }
