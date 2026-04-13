@@ -1,0 +1,120 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>🚙 Mis Vehículos</h1>
+      <p class="subtitle">Gestiona los vehículos registrados en tu cuenta</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreate()">
+      ➕ Registrar Vehículo
+    </button>
+  </div>
+
+  @if (success) {
+    <div class="alert alert-success">✅ {{ success }}</div>
+  }
+  @if (error) {
+    <div class="alert alert-error">❌ {{ error }}</div>
+  }
+
+  <!-- Formulario (CU4: Registrar / CU5: Editar) -->
+  @if (showForm) {
+    <div class="modal-overlay" (click)="cancelForm()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ editingId ? '✏️ Editar Vehículo' : '🚗 Registrar Nuevo Vehículo' }}</h2>
+          <button class="close-btn" (click)="cancelForm()">✕</button>
+        </div>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="brand">Marca</label>
+              <input id="brand" type="text" formControlName="brand" placeholder="Toyota">
+            </div>
+            <div class="form-group">
+              <label for="model">Modelo</label>
+              <input id="model" type="text" formControlName="model" placeholder="Corolla">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="year">Año</label>
+              <input id="year" type="number" formControlName="year" placeholder="2024">
+            </div>
+            <div class="form-group">
+              <label for="color">Color</label>
+              <input id="color" type="text" formControlName="color" placeholder="Blanco">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="license_plate">Placa</label>
+              <input id="license_plate" type="text" formControlName="license_plate" placeholder="ABC-1234">
+            </div>
+            <div class="form-group">
+              <label for="vin">VIN <span class="optional">(opcional)</span></label>
+              <input id="vin" type="text" formControlName="vin" placeholder="1HGBH41JXMN109186">
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelForm()">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="form.invalid || saving">
+              @if (saving) {
+                <span class="spinner"></span> Guardando...
+              } @else {
+                {{ editingId ? 'Actualizar' : 'Registrar' }}
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Lista de vehículos -->
+  @if (loading) {
+    <div class="loading-state">Cargando vehículos...</div>
+  } @else if (vehicles.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🚙</div>
+      <h3>No tienes vehículos registrados</h3>
+      <p>Registra tu primer vehículo para poder reportar emergencias</p>
+      <button class="btn btn-primary" (click)="openCreate()">Registrar Vehículo</button>
+    </div>
+  } @else {
+    <div class="vehicles-grid">
+      @for (v of vehicles; track v.id) {
+        <div class="vehicle-card">
+          <div class="vehicle-icon">🚗</div>
+          <div class="vehicle-info">
+            <h3>{{ v.brand }} {{ v.model }}</h3>
+            <div class="vehicle-details">
+              <span class="detail"><strong>Año:</strong> {{ v.year }}</span>
+              <span class="detail"><strong>Color:</strong> {{ v.color }}</span>
+              <span class="detail"><strong>Placa:</strong> {{ v.license_plate }}</span>
+              @if (v.vin) {
+                <span class="detail"><strong>VIN:</strong> {{ v.vin }}</span>
+              }
+            </div>
+          </div>
+          <div class="vehicle-actions">
+            <button class="btn btn-sm btn-outline" (click)="openEdit(v)" title="Editar">✏️ Editar</button>
+
+            @if (deleteConfirmId === v.id) {
+              <div class="delete-confirm">
+                <span>¿Eliminar este vehículo?</span>
+                <button class="btn btn-sm btn-danger" (click)="deleteVehicle(v.id)">Sí, eliminar</button>
+                <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">No</button>
+              </div>
+            } @else {
+              <button class="btn btn-sm btn-danger-outline" (click)="confirmDelete(v.id)" title="Eliminar">🗑️ Eliminar</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -21,7 +21,8 @@ export class LayoutComponent implements OnInit {
     { icon: '📊', label: 'Dashboard', route: '/dashboard' },
     { icon: '🆘', label: 'Disponibles', route: '/available' },
     { icon: '📋', label: 'Mis Incidentes', route: '/incidents' },
-    { icon: '👨‍🔧', label: 'Técnicos', route: '/technicians' },
+    { icon: '�', label: 'Vehículos', route: '/vehicles' },
+    { icon: '�👨‍🔧', label: 'Técnicos', route: '/technicians' },
     { icon: '🔔', label: 'Notificaciones', route: '/notifications' },
     { icon: '⚙️', label: 'Perfil', route: '/profile' },
   ];
@@ -29,8 +30,14 @@ export class LayoutComponent implements OnInit {
   constructor(private auth: AuthService, private ws: WorkshopService) {}
 
   ngOnInit(): void {
-    this.ws.getProfile().subscribe(w => this.workshop = w);
-    this.ws.getNotifications(true).subscribe(n => this.unreadCount = n.length);
+    this.ws.getProfile().subscribe({
+      next: w => this.workshop = w,
+      error: () => this.workshop = null
+    });
+    this.ws.getNotifications(true).subscribe({
+      next: n => this.unreadCount = n.length,
+      error: () => this.unreadCount = 0
+    });
   }
 
   logout(): void {

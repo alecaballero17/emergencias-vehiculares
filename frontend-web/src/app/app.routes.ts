@@ -4,6 +4,7 @@ import { LayoutComponent } from './layout/layout/layout';
 
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login/login').then(m => m.LoginComponent) },
+  { path: 'register', loadComponent: () => import('./pages/register/register').then(m => m.RegisterComponent) },
   {
     path: '',
     component: LayoutComponent,
@@ -16,6 +17,7 @@ export const routes: Routes = [
       { path: 'technicians', loadComponent: () => import('./pages/technicians/technicians').then(m => m.TechniciansComponent) },
       { path: 'notifications', loadComponent: () => import('./pages/notifications/notifications').then(m => m.NotificationsComponent) },
       { path: 'profile', loadComponent: () => import('./pages/profile/profile').then(m => m.ProfileComponent) },
+      { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then(m => m.VehiclesComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

@@ -110,3 +110,24 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+export interface Vehicle {
+  id: number;
+  user_id: number;
+  brand: string;
+  model: string;
+  year: number;
+  color: string;
+  license_plate: string;
+  vin: string | null;
+  created_at: string;
+}
+
+export interface VehicleCreate {
+  brand: string;
+  model: string;
+  year: number;
+  color: string;
+  license_plate: string;
+  vin?: string;
+}
