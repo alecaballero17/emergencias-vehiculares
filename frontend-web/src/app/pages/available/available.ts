@@ -31,9 +31,9 @@ export class AvailableComponent implements OnInit {
 
   getTypeLabel(type: string): string {
     const map: Record<string, string> = {
-      battery: '🔋 Batería', tire: '🛞 Llanta', engine: '🔧 Motor',
-      collision: '💥 Choque', lockout: '🔑 Llaves', fuel: '⛽ Combustible',
-      towing: '🚛 Remolque', other: '❓ Otro'
+      battery: '🔋 Batería', tire: '🛞 Llanta', crash: '💥 Accidente',
+      engine: '🔧 Motor', keys_lost: '🔑 Llave perdida', keys_locked: '🔐 Llave en vehículo',
+      overheating: '🌡️ Sobrecalentamiento', other: '❓ Otro'
     };
     return map[type] || type;
   }

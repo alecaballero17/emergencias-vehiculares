@@ -2,20 +2,30 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <span class="logo">🚗</span>
-      @if (sidebarOpen) {
-        <span class="brand">Emergencias</span>
-      }
+      <div class="sidebar-brand">
+        <span class="brand-icon">🚗</span>
+        @if (sidebarOpen) {
+          <div class="brand-text">
+            <span class="brand-name">Emergencias</span>
+            <span class="brand-sub">Panel Taller</span>
+          </div>
+        }
+      </div>
     </div>
 
     <nav class="sidebar-nav">
       @for (item of menuItems; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item">
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          class="nav-item"
+          [title]="item.label"
+        >
           <span class="nav-icon">{{ item.icon }}</span>
           @if (sidebarOpen) {
             <span class="nav-label">{{ item.label }}</span>
-            @if (item.route === '/notifications' && unreadCount > 0) {
-              <span class="badge">{{ unreadCount }}</span>
+            @if (item.label === 'Notificaciones' && unreadCount > 0) {
+              <span class="nav-badge">{{ unreadCount }}</span>
             }
           }
         </a>
@@ -23,28 +33,50 @@
     </nav>
 
     <div class="sidebar-footer">
-      <button class="nav-item logout-btn" (click)="logout()">
-        <span class="nav-icon">🚪</span>
+      @if (sidebarOpen && workshop) {
+        <div class="workshop-info">
+          <div class="workshop-avatar">{{ workshop.name.charAt(0) }}</div>
+          <div class="workshop-details">
+            <span class="workshop-name">{{ workshop.name }}</span>
+            <span class="workshop-email">{{ workshop.email }}</span>
+          </div>
+        </div>
+      }
+      <button class="logout-btn" (click)="logout()" title="Cerrar sesión">
+        <span>🚪</span>
         @if (sidebarOpen) {
-          <span class="nav-label">Cerrar Sesión</span>
+          <span>Salir</span>
         }
       </button>
     </div>
   </aside>
 
   <!-- Main Content -->
-  <div class="main-content">
+  <div class="main-wrapper">
     <header class="topbar">
-      <button class="toggle-btn" (click)="toggleSidebar()">☰</button>
-      <div class="topbar-info">
-        @if (workshop) {
-          <span class="workshop-name">{{ workshop.name }}</span>
+      <button class="toggle-btn" (click)="toggleSidebar()">
+        @if (sidebarOpen) {
+          <span>◀</span>
+        } @else {
+          <span>▶</span>
         }
+      </button>
+
+      <div class="topbar-right">
+        @if (workshop) {
+          <span class="topbar-workshop">{{ workshop.name }}</span>
+        }
+        <a routerLink="/notifications" class="topbar-notif" title="Notificaciones">
+          🔔
+          @if (unreadCount > 0) {
+            <span class="notif-dot"></span>
+          }
+        </a>
       </div>
     </header>
 
-    <main class="content">
-      <router-outlet></router-outlet>
+    <main class="main-content">
+      <router-outlet />
     </main>
   </div>
 </div>

@@ -1,22 +1,45 @@
 <div class="page">
   <div class="page-header">
-    <h2>📋 Mis Incidentes</h2>
-    <div class="filters">
-      <select [(ngModel)]="statusFilter" (change)="loadIncidents()" class="form-select">
-        <option value="">Todos</option>
-        <option value="assigned">Asignados</option>
+    <div>
+      <h2>Mis Incidentes</h2>
+      <span class="page-subtitle">Historial de incidentes asignados a tu taller</span>
+    </div>
+    <div class="header-actions">
+      <select class="form-input filter-select" [(ngModel)]="statusFilter" (change)="loadIncidents()">
+        <option value="">Todos los estados</option>
+        <option value="assigned">Asignado</option>
         <option value="in_progress">En Proceso</option>
-        <option value="completed">Completados</option>
+        <option value="completed">Completado</option>
+        <option value="cancelled">Cancelado</option>
       </select>
     </div>
   </div>
 
   @if (loading) {
-    <div class="loading">Cargando...</div>
+    <div class="card">
+      <div class="skeleton-list">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 10px;"></div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+              <div class="skeleton" style="width: 50%; height: 14px;"></div>
+              <div class="skeleton" style="width: 30%; height: 12px;"></div>
+            </div>
+            <div class="skeleton" style="width: 80px; height: 24px; border-radius: 99px;"></div>
+          </div>
+        }
+      </div>
+    </div>
   } @else if (incidents.length === 0) {
-    <div class="empty">No se encontraron incidentes.</div>
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">No hay incidentes</div>
+        <div class="empty-desc">No se encontraron incidentes con el filtro seleccionado.</div>
+      </div>
+    </div>
   } @else {
-    <div class="table-wrapper">
+    <div class="card">
       <table class="table">
         <thead>
           <tr>
@@ -24,21 +47,19 @@
             <th>Tipo</th>
             <th>Prioridad</th>
             <th>Estado</th>
-            <th>Dirección</th>
             <th>Fecha</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           @for (inc of incidents; track inc.id) {
-            <tr>
-              <td>#{{ inc.id }}</td>
-              <td>{{ getTypeLabel(inc.incident_type) }}</td>
-              <td><span class="priority-tag priority-{{ inc.priority }}">{{ inc.priority }}</span></td>
-              <td><span class="status-tag status-{{ inc.status }}">{{ getStatusLabel(inc.status) }}</span></td>
-              <td>{{ inc.address || 'Sin dirección' }}</td>
-              <td>{{ inc.created_at | date:'short' }}</td>
-              <td><a [routerLink]="['/incidents', inc.id]" class="btn btn-sm">Ver</a></td>
+            <tr class="animate-in">
+              <td class="td-id">#{{ inc.id }}</td>
+              <td class="td-type">{{ getTypeLabel(inc.incident_type) }}</td>
+              <td><span class="badge" [class]="'priority-' + inc.priority">{{ inc.priority | uppercase }}</span></td>
+              <td><span class="badge" [class]="'status-' + inc.status">{{ getStatusLabel(inc.status) }}</span></td>
+              <td class="td-date">{{ inc.created_at | date:'dd/MM/yy HH:mm' }}</td>
+              <td><a [routerLink]="['/incidents', inc.id]" class="btn btn-ghost btn-sm">Ver →</a></td>
             </tr>
           }
         </tbody>

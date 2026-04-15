@@ -1,43 +1,49 @@
 <div class="page">
   <div class="page-header">
-    <h2>🆘 Incidentes Disponibles</h2>
-    <button class="btn btn-outline" (click)="loadIncidents()">🔄 Actualizar</button>
+    <div>
+      <h2>Incidentes Disponibles</h2>
+      <span class="page-subtitle">Emergencias sin taller asignado que puedes tomar</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" (click)="loadIncidents()">🔄 Actualizar</button>
   </div>
 
   @if (loading) {
-    <div class="loading">Cargando incidentes...</div>
+    <div class="cards-grid">
+      @for (i of [1,2,3]; track i) {
+        <div class="card">
+          <div class="skeleton" style="width: 50%; height: 16px; margin-bottom: 12px;"></div>
+          <div class="skeleton" style="width: 80%; height: 14px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="width: 60%; height: 14px;"></div>
+        </div>
+      }
+    </div>
   } @else if (incidents.length === 0) {
-    <div class="empty-state">
-      <span class="empty-icon">📭</span>
-      <p>No hay incidentes disponibles en este momento.</p>
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <div class="empty-title">No hay emergencias pendientes</div>
+        <div class="empty-desc">Todas las emergencias han sido atendidas. ¡Buen trabajo!</div>
+      </div>
     </div>
   } @else {
-    <div class="incident-grid">
+    <div class="cards-grid">
       @for (inc of incidents; track inc.id) {
-        <div class="incident-card">
-          <div class="card-header">
-            <span class="type-badge">{{ getTypeLabel(inc.incident_type) }}</span>
-            <span class="priority-tag" [class]="getPriorityClass(inc.priority)">{{ inc.priority }}</span>
+        <a [routerLink]="['/incidents', inc.id]" class="incident-card card card-hover animate-in">
+          <div class="card-top">
+            <span class="badge" [class]="'priority-' + inc.priority">{{ inc.priority | uppercase }}</span>
+            <span class="time-ago">{{ timeAgo(inc.created_at) }}</span>
           </div>
           <div class="card-body">
+            <span class="card-type">{{ getTypeLabel(inc.incident_type) }}</span>
             @if (inc.description) {
-              <p class="description">{{ inc.description }}</p>
-            }
-            @if (inc.address) {
-              <p class="address">📍 {{ inc.address }}</p>
-            }
-            @if (inc.ai_summary) {
-              <div class="ai-summary">
-                <span class="ai-tag">🤖 IA</span>
-                <p>{{ inc.ai_summary | slice:0:120 }}...</p>
-              </div>
+              <p class="card-desc">{{ inc.description | slice:0:120 }}...</p>
             }
           </div>
           <div class="card-footer">
-            <span class="time">{{ timeAgo(inc.created_at) }}</span>
-            <a [routerLink]="['/incidents', inc.id]" class="btn btn-primary btn-sm">Ver detalle</a>
+            <span class="card-location">📍 {{ inc.address || 'Sin dirección' }}</span>
+            <span class="card-id">#{{ inc.id }}</span>
           </div>
-        </div>
+        </a>
       }
     </div>
   }

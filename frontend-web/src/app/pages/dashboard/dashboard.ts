@@ -57,13 +57,21 @@ export class DashboardComponent implements OnInit {
     const map: Record<string, string> = {
       battery: '🔋 Batería',
       tire: '🛞 Llanta',
+      crash: '💥 Accidente',
       engine: '🔧 Motor',
-      collision: '💥 Choque',
-      lockout: '🔑 Llaves',
-      fuel: '⛽ Combustible',
-      towing: '🚛 Remolque',
+      keys_lost: '🔑 Llave perdida',
+      keys_locked: '🔐 Llave en vehículo',
+      overheating: '🌡️ Sobrecalentamiento',
       other: '❓ Otro'
     };
     return map[type] || type;
+  }
+
+  getTypeEmoji(type: string): string {
+    const map: Record<string, string> = {
+      battery: '🔋', tire: '🛞', crash: '💥', engine: '🔧',
+      keys_lost: '🔑', keys_locked: '🔐', overheating: '🌡️', other: '❓'
+    };
+    return map[type] || '❓';
   }
 }

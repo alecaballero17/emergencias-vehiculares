@@ -21,8 +21,7 @@ export class LayoutComponent implements OnInit {
     { icon: '📊', label: 'Dashboard', route: '/dashboard' },
     { icon: '🆘', label: 'Disponibles', route: '/available' },
     { icon: '📋', label: 'Mis Incidentes', route: '/incidents' },
-    { icon: '�', label: 'Vehículos', route: '/vehicles' },
-    { icon: '�👨‍🔧', label: 'Técnicos', route: '/technicians' },
+    { icon: '👨‍🔧', label: 'Técnicos', route: '/technicians' },
     { icon: '🔔', label: 'Notificaciones', route: '/notifications' },
     { icon: '⚙️', label: 'Perfil', route: '/profile' },
   ];

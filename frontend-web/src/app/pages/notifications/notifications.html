@@ -1,19 +1,43 @@
 <div class="page">
-  <h2>🔔 Notificaciones</h2>
+  <div class="page-header">
+    <div>
+      <h2>Notificaciones</h2>
+      <span class="page-subtitle">Centro de notificaciones del taller</span>
+    </div>
+  </div>
 
   @if (loading) {
-    <div class="loading">Cargando...</div>
+    <div class="card">
+      <div class="skeleton-list">
+        @for (i of [1,2,3]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 10px;"></div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+              <div class="skeleton" style="width: 40%; height: 14px;"></div>
+              <div class="skeleton" style="width: 70%; height: 12px;"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
   } @else if (notifications.length === 0) {
-    <div class="empty">No hay notificaciones.</div>
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">🔔</div>
+        <div class="empty-title">Sin notificaciones</div>
+        <div class="empty-desc">No tienes notificaciones pendientes.</div>
+      </div>
+    </div>
   } @else {
     <div class="notifications-list">
       @for (n of notifications; track n.id) {
-        <div class="notification-item" [class.unread]="!n.is_read" (click)="markRead(n)">
+        <div class="notification-item animate-in" [class.unread]="!n.is_read" (click)="markRead(n)">
+          <div class="notification-dot" [class.active]="!n.is_read"></div>
           <div class="notification-icon">{{ n.is_read ? '📨' : '🔔' }}</div>
-          <div class="notification-content">
+          <div class="notification-body">
             <h4>{{ n.title }}</h4>
             <p>{{ n.message }}</p>
-            <span class="notification-time">{{ n.created_at | date:'medium' }}</span>
+            <span class="notification-time">{{ n.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
         </div>
       }

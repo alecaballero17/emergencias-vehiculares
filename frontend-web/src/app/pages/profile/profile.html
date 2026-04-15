@@ -1,41 +1,70 @@
 <div class="page">
-  <h2>⚙️ Perfil del Taller</h2>
+  <div class="page-header">
+    <div>
+      <h2>Perfil del Taller</h2>
+      <span class="page-subtitle">Administra la información de tu taller</span>
+    </div>
+  </div>
 
   @if (loading) {
-    <div class="loading">Cargando...</div>
+    <div class="card">
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div>
+            <div class="skeleton" style="width: 100px; height: 12px; margin-bottom: 8px;"></div>
+            <div class="skeleton" style="width: 100%; height: 44px;"></div>
+          </div>
+        }
+      </div>
+    </div>
   } @else {
-    <div class="profile-card">
+    <div class="profile-card card">
       @if (success) {
-        <div class="alert alert-success">{{ success }}</div>
+        <div class="success-alert">
+          <span>✅</span>
+          <span>{{ success }}</span>
+        </div>
       }
       @if (error) {
-        <div class="alert alert-error">{{ error }}</div>
+        <div class="error-alert">
+          <span>⚠️</span>
+          <span>{{ error }}</span>
+        </div>
       }
 
-      <div class="form-group">
-        <label>Nombre del Taller</label>
-        <input type="text" [(ngModel)]="form.name" class="form-input">
-      </div>
-      <div class="form-group">
-        <label>Teléfono</label>
-        <input type="text" [(ngModel)]="form.phone" class="form-input">
-      </div>
-      <div class="form-group">
-        <label>Dirección</label>
-        <input type="text" [(ngModel)]="form.address" class="form-input">
-      </div>
-      <div class="form-group">
-        <label>Capacidad</label>
-        <input type="number" [(ngModel)]="form.capacity" class="form-input" min="1">
-      </div>
-      <div class="form-group">
-        <label>Especialidades (separar con comas)</label>
-        <input type="text" [(ngModel)]="form.specialties" class="form-input" placeholder="batería, motor, llantas, remolque">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nombre del Taller</label>
+          <input type="text" [(ngModel)]="form.name" class="form-input" placeholder="Nombre del taller">
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" [(ngModel)]="form.phone" class="form-input" placeholder="+591 7XXXXXXX">
+        </div>
+        <div class="form-group full-width">
+          <label>Dirección</label>
+          <input type="text" [(ngModel)]="form.address" class="form-input" placeholder="Dirección completa del taller">
+        </div>
+        <div class="form-group">
+          <label>Capacidad (técnicos)</label>
+          <input type="number" [(ngModel)]="form.capacity" class="form-input" min="1">
+        </div>
+        <div class="form-group">
+          <label>Especialidades (separar con comas)</label>
+          <input type="text" [(ngModel)]="form.specialties" class="form-input" placeholder="batería, motor, llantas">
+        </div>
       </div>
 
-      <button class="btn btn-primary" (click)="save()" [disabled]="saving">
-        {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
-      </button>
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving">
+          @if (saving) {
+            <span class="spinner"></span>
+            <span>Guardando...</span>
+          } @else {
+            <span>Guardar Cambios</span>
+          }
+        </button>
+      </div>
     </div>
   }
 </div>
