@@ -16,19 +16,33 @@ export class DashboardComponent implements OnInit {
   activeCount = 0;
   completedCount = 0;
   recentIncidents: Incident[] = [];
-  loading = true;
+  loading = false;
 
   constructor(private ws: WorkshopService) {}
 
   ngOnInit(): void {
-    this.ws.getAvailableIncidents().subscribe(i => {
-      this.availableCount = i.length;
-    });
-    this.ws.getAssignedIncidents().subscribe(incidents => {
-      this.recentIncidents = incidents.slice(0, 5);
-      this.activeCount = incidents.filter(i => i.status === 'in_progress' || i.status === 'assigned').length;
-      this.completedCount = incidents.filter(i => i.status === 'completed').length;
+    // Safety timeout: force loading off after 3 seconds no matter what
+    setTimeout(() => {
       this.loading = false;
+    }, 3000);
+
+    this.ws.getAvailableIncidents().subscribe({
+      next: (i) => {
+        this.availableCount = i.length;
+      },
+      error: () => {}
+    });
+
+    this.ws.getAssignedIncidents().subscribe({
+      next: (incidents) => {
+        this.recentIncidents = incidents.slice(0, 5);
+        this.activeCount = incidents.filter(i => i.status === 'in_progress' || i.status === 'assigned').length;
+        this.completedCount = incidents.filter(i => i.status === 'completed').length;
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+      }
     });
   }
 
