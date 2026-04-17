@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { WorkshopService } from '../../services/workshop.service';
@@ -18,30 +18,37 @@ export class DashboardComponent implements OnInit {
   recentIncidents: Incident[] = [];
   loading = false;
 
-  constructor(private ws: WorkshopService) {}
+  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     // Safety timeout: force loading off after 3 seconds no matter what
     setTimeout(() => {
-      this.loading = false;
-    }, 3000);
+      if (this.loading) {
+        this.loading = false;
+        this.cd.detectChanges();
+      }
+    }, 4000);
 
     this.ws.getAvailableIncidents().subscribe({
       next: (i) => {
-        this.availableCount = i.length;
+        this.availableCount = (i || []).length;
+        this.cd.detectChanges();
       },
       error: () => {}
     });
 
     this.ws.getAssignedIncidents().subscribe({
       next: (incidents) => {
-        this.recentIncidents = incidents.slice(0, 5);
-        this.activeCount = incidents.filter(i => i.status === 'in_progress' || i.status === 'assigned').length;
-        this.completedCount = incidents.filter(i => i.status === 'completed').length;
+        const safeInc = incidents || [];
+        this.recentIncidents = safeInc.slice(0, 5);
+        this.activeCount = safeInc.filter(i => i.status === 'in_progress' || i.status === 'assigned').length;
+        this.completedCount = safeInc.filter(i => i.status === 'completed').length;
         this.loading = false;
+        this.cd.detectChanges();
       },
       error: () => {
         this.loading = false;
+        this.cd.detectChanges();
       }
     });
   }

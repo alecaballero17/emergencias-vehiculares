@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { WorkshopService } from '../../services/workshop.service';
@@ -42,17 +42,27 @@ export class FinanceComponent implements OnInit {
   loading = true;
   readonly COMMISSION_RATE = 0.10;
 
-  constructor(private ws: WorkshopService) {}
+  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    setTimeout(() => { this.loading = false; }, 3000);
+    setTimeout(() => { 
+      if (this.loading) {
+        this.loading = false; 
+        this.cd.detectChanges();
+      }
+    }, 4000);
 
     this.ws.getAssignedIncidents().subscribe({
       next: (incidents) => {
-        this.processFinanceData(incidents);
+        this.processFinanceData(incidents || []);
         this.loading = false;
+        this.cd.detectChanges();
       },
-      error: () => { this.loading = false; }
+      error: () => { 
+        this.records = [];
+        this.loading = false; 
+        this.cd.detectChanges();
+      }
     });
   }
 

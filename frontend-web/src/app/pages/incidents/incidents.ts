@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -17,17 +17,31 @@ export class IncidentsComponent implements OnInit {
   loading = false;
   statusFilter = '';
 
-  constructor(private ws: WorkshopService) {}
+  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    setTimeout(() => { this.loading = false; }, 3000);
+    setTimeout(() => { 
+      if (this.loading) {
+        this.loading = false;
+        this.cd.detectChanges();
+      }
+    }, 4000);
     this.loadIncidents();
   }
 
   loadIncidents(): void {
+    this.loading = true;
     this.ws.getAssignedIncidents(this.statusFilter || undefined).subscribe({
-      next: (data) => { this.incidents = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: (data) => { 
+        this.incidents = data || []; 
+        this.loading = false; 
+        this.cd.detectChanges();
+      },
+      error: () => { 
+        this.incidents = [];
+        this.loading = false; 
+        this.cd.detectChanges();
+      }
     });
   }
 

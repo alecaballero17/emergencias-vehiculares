@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { WorkshopService } from '../../services/workshop.service';
@@ -15,18 +15,31 @@ export class AvailableComponent implements OnInit {
   incidents: Incident[] = [];
   loading = true;
 
-  constructor(private ws: WorkshopService) {}
+  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    setTimeout(() => { this.loading = false; }, 3000);
+    setTimeout(() => { 
+      if (this.loading) {
+        this.loading = false; 
+        this.cd.detectChanges();
+      }
+    }, 4000);
     this.loadIncidents();
   }
 
   loadIncidents(): void {
     this.loading = true;
     this.ws.getAvailableIncidents().subscribe({
-      next: (data) => { this.incidents = data; this.loading = false; },
-      error: () => { this.loading = false; }
+      next: (data) => { 
+        this.incidents = data || []; 
+        this.loading = false; 
+        this.cd.detectChanges();
+      },
+      error: () => { 
+        this.incidents = [];
+        this.loading = false; 
+        this.cd.detectChanges();
+      }
     });
   }
 

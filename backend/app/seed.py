@@ -1,11 +1,13 @@
 """
-Script para inicializar la base de datos con datos de prueba.
+Script para inicializar la base de datos con datos de prueba realistas ("inteligentes").
 Ejecutar: python -m app.seed
 """
+import random
+import datetime
 from app.database import engine, SessionLocal, Base
-from app.models import *
+from app.models import User, Vehicle, Workshop, Technician, Incident, Evidence
+from app.models.enums import UserRole, IncidentStatus, IncidentPriority
 from app.utils.security import hash_password
-
 
 def seed():
     # Re-crear tablas desde cero
@@ -47,6 +49,7 @@ def seed():
         db.add_all([v1, v2, v3, v4])
 
         # === Talleres ===
+        w1_id = 1
         w1 = Workshop(
             name="Taller Mecánico El Rápido",
             email="elrapido@example.com",
@@ -56,7 +59,7 @@ def seed():
             latitude=-16.5000,
             longitude=-68.1500,
             capacity=10,
-            specialties=["battery", "engine", "tire", "overheating"],
+            specialties=["Eléctrico", "Baterías", "Motor", "Mecánica", "Llantas", "Refrigeración"],
         )
         w2 = Workshop(
             name="AutoServicio López",
@@ -67,151 +70,181 @@ def seed():
             latitude=-16.5100,
             longitude=-68.1300,
             capacity=5,
-            specialties=["tire", "crash", "keys_lost", "keys_locked"],
+            specialties=["Llantas", "Neumáticos", "Carrocería", "Colisión", "Cerrajería", "Llaves"],
         )
-        w3 = Workshop(
-            name="Taller Premium Motors",
-            email="premium@example.com",
-            password_hash=hash_password("taller123"),
-            phone="+591 75678901",
-            address="Zona Sur, Calle 21 #890, La Paz",
-            latitude=-16.5300,
-            longitude=-68.0800,
-            capacity=15,
-            specialties=["battery", "engine", "crash", "tire", "overheating"],
-        )
-        db.add_all([w1, w2, w3])
+        db.add_all([w1, w2])
         db.flush()
 
         # === Técnicos ===
         techs = [
-            Technician(workshop_id=w1.id, name="Juan Pérez", specialties=["battery", "engine"], is_available=True),
-            Technician(workshop_id=w1.id, name="Pedro Quispe", specialties=["tire", "overheating"], is_available=True),
-            Technician(workshop_id=w1.id, name="Samuel Mamani", specialties=["engine"], is_available=False),
+            Technician(workshop_id=w1.id, name="Juan Pérez", specialties=["Baterías", "Eléctrico"], is_available=True),
+            Technician(workshop_id=w1.id, name="Pedro Quispe", specialties=["Mecánica", "Motor", "Radiador"], is_available=True),
+            Technician(workshop_id=w1.id, name="Samuel Mamani", specialties=["Llantas", "Neumáticos", "Mecánica"], is_available=True),
+            Technician(workshop_id=w1.id, name="Diego Torrez", specialties=["General", "Motor"], is_available=False),
             
-            Technician(workshop_id=w2.id, name="Miguel Torres", specialties=["tire", "keys_lost"], is_available=True),
-            Technician(workshop_id=w2.id, name="Roberto Mamani", specialties=["crash"], is_available=True),
-            
-            Technician(workshop_id=w3.id, name="Luis Vargas", specialties=["engine", "crash"], is_available=True),
-            Technician(workshop_id=w3.id, name="Diego Flores", specialties=["battery", "tire"], is_available=True),
-            Technician(workshop_id=w3.id, name="Andrés Choque", specialties=["engine"], is_available=False),
-            Technician(workshop_id=w3.id, name="Carlos Ruiz", specialties=["overheating", "tire"], is_available=True),
+            Technician(workshop_id=w2.id, name="Miguel Vargas", specialties=["Cerrajería", "Llaves"], is_available=True),
+            Technician(workshop_id=w2.id, name="Roberto Flores", specialties=["Carrocería", "Chasis", "Remolque"], is_available=True),
         ]
         db.add_all(techs)
         db.flush()
 
         # === Incidentes ===
-        import datetime
-        from app.models.enums import IncidentStatus, IncidentPriority
-
         now = datetime.datetime.utcnow()
 
-        incidents = [
-            # PENDIENTES
-            Incident(
-                user_id=user1.id, vehicle_id=v1.id, incident_type="battery",
-                description="Mi auto no arranca en el parqueo de mi casa. No hay señal de luces.",
-                audio_transcription="Hola, estoy en mi garaje y mi Toyota no enciende. Creo que la batería murió porque dejé las luces prendidas toda la noche.",
-                priority=IncidentPriority.MEDIUM, status=IncidentStatus.PENDING,
-                address="Sopocachi, Calle Aspiazu", latitude=-16.5120, longitude=-68.1280,
-                ai_summary="Fallo de sistema eléctrico por descarga profunda de batería.",
-                ai_classification="Sistema Eléctrico / Batería", ai_confidence=98.5,
-                created_at=now - datetime.timedelta(minutes=10)
-            ),
-            Incident(
-                user_id=user2.id, vehicle_id=v3.id, incident_type="overheating",
-                description="Sale vapor del capó en plena subida.",
-                audio_transcription="¡Ayuda! Mi Tucson está echando humo blanco por el motor y la aguja de temperatura está al máximo. Me detuve a un lado de la vía.",
-                priority=IncidentPriority.CRITICAL, status=IncidentStatus.PENDING,
-                address="Autopista La Paz - El Alto, km 5", latitude=-16.4800, longitude=-68.1600,
-                ai_summary="Sobrecalentamiento crítico. Posible rotura de manguera o falla en termostato.",
-                ai_classification="Motor / Refrigeración", ai_confidence=92.0,
-                created_at=now - datetime.timedelta(minutes=5)
-            ),
-            
-            # ASIGNADOS (A w1 - El Rápido)
-            Incident(
-                user_id=user3.id, vehicle_id=v4.id, workshop_id=w1.id,
-                incident_type="tire", description="Llantas pinchadas por clavos.",
-                audio_transcription="Buenas tardes, pisé una tabla con clavos y tengo dos llantas bajas. Estoy cerca de la Pérez Velasco.",
-                priority=IncidentPriority.HIGH, status=IncidentStatus.ASSIGNED,
-                address="Av. Mariscal Santa Cruz, Plaza Pérez Velasco", latitude=-16.4950, longitude=-68.1350,
-                ai_summary="Daños múltiples en neumáticos por agentes externos. Requiere equipo de parchado o reposición.",
-                ai_classification="Neumáticos", ai_confidence=95.0,
-                created_at=now - datetime.timedelta(minutes=45), assigned_at=now - datetime.timedelta(minutes=10)
-            ),
+        incidents = []
 
-            # EN PROGRESO (w1)
-            Incident(
-                user_id=user1.id, vehicle_id=v2.id, workshop_id=w1.id, technician_id=techs[0].id,
-                incident_type="engine", description="Ruido metálico en el motor.",
-                audio_transcription="Siento un golpeteo fuerte abajo del motor cuando acelero. Preferí no moverlo más.",
-                priority=IncidentPriority.HIGH, status=IncidentStatus.IN_PROGRESS,
-                address="Zona de San Pedro, Calle Cañada Strongest", latitude=-16.5050, longitude=-68.1380,
-                ai_summary="Ruido mecánico anómalo. Inspección necesaria para descartar biela o válvulas.",
-                ai_classification="Motor Mecánico", ai_confidence=88.0,
-                created_at=now - datetime.timedelta(hours=1), assigned_at=now - datetime.timedelta(minutes=40)
-            ),
-
-            # COMPLETADOS (w1)
-            Incident(
-                user_id=user2.id, vehicle_id=v3.id, workshop_id=w1.id, technician_id=techs[1].id,
-                incident_type="tire", description="Cambio de llanta de auxilio.",
-                priority=IncidentPriority.LOW, status=IncidentStatus.COMPLETED,
-                address="Obrajes, Calle 5", latitude=-16.5250, longitude=-68.1120,
-                ai_summary="Asistencia de cambio de neumático completada con éxito.",
-                ai_classification="Servicio Rápido", ai_confidence=100.0,
-                final_cost=80.0,
-                created_at=now - datetime.timedelta(days=1), assigned_at=now - datetime.timedelta(days=1, hours=-1),
-                completed_at=now - datetime.timedelta(days=1, hours=-2)
-            ),
-
-            # OTROS TALLERES (Para que no esté vacío el sistema global)
-            Incident(
-                user_id=user3.id, vehicle_id=v4.id, workshop_id=w2.id,
-                incident_type="crash", description="Choque por alcance.",
-                priority=IncidentPriority.MEDIUM, status=IncidentStatus.IN_PROGRESS,
-                address="Av. Busch, Miraflores", latitude=-16.5000, longitude=-68.1200,
-                ai_summary="Colisión frontal moderada. Requiere peritaje de chapa y pintura.",
-                ai_classification="Carrocería / Choque", ai_confidence=94.5,
-                created_at=now - datetime.timedelta(hours=2), assigned_at=now - datetime.timedelta(hours=1)
-            ),
+        # --- 1. Incidentes PENDIENTES (Para probar la vista Available Incidents con IA) ---
+        pendientes_data = [
+            {
+                "type": "battery", 
+                "desc": "El auto no prende, hace un sonido de 'click click' al girar la llave y las luces del tablero parpadean débilmente.",
+                "transcrip": "Traté de encender el carro esta mañana para ir al trabajo. Sólo suena click, click, click y las luces se apagan. Creo que dejé algo encendido.",
+                "ai_sum": "Fallo en sistema de encendido. Los síntomas (sonido 'click' y caída de voltaje en luces) indican una batería descargada o falla en solenoide/alternador.",
+                "prio": IncidentPriority.MEDIUM,
+                "ai_class": "Sistema Eléctrico (Batería)",
+                "conf": 96.5,
+                "address": "Sopocachi, Calle Aspiazu",
+                "lat": -16.5120, "lon": -68.1280
+            },
+            {
+                "type": "crash", 
+                "desc": "Me chocaron por detrás en el semáforo. El maletero está hundido y el auto no avanza bien, parece que algo roza la llanta trasera.",
+                "transcrip": "Acabo de tener un accidente en la autopista. Un minibus me golpeó por detrás. Necesito grúa porque la llanta trasera izquierda está bloqueada por la carrocería.",
+                "ai_sum": "Choque por alcance severo con compromiso de tren de rodaje trasero. Requiere servicio de remolque y posterior trabajo de chapistería y chasis.",
+                "prio": IncidentPriority.CRITICAL,
+                "ai_class": "Colisión Estructural Alta Gravedad",
+                "conf": 98.2,
+                "address": "Autopista La Paz - El Alto, Km 2",
+                "lat": -16.4800, "lon": -68.1600
+            },
+            {
+                "type": "tire", 
+                "desc": "Caí en un bache gigante y la llanta se reventó. No tengo mi gata hidráulica para cambiarla por la de repuesto.",
+                "transcrip": "Hola, estoy en la Avenida Arce, pasé por un hueco que no vi por la lluvia y mi llanta delantera derecha explotó. El aro parece doblado también.",
+                "ai_sum": "Reventón de neumático por impacto. Daño estructural posible en el aro/rin. Requiere asistencia en sitio para reemplazo por rueda de repuesto o grúa si el rin está inoperable.",
+                "prio": IncidentPriority.HIGH,
+                "ai_class": "Desperfecto Neumático",
+                "conf": 92.0,
+                "address": "Av. Arce, esquina Montevideo",
+                "lat": -16.5050, "lon": -68.1250
+            },
+            {
+                "type": "keys_locked", 
+                "desc": "Dejé las llaves puestas en el contacto y al cerrar la puerta saltó el seguro.",
+                "transcrip": "Estoy en el parqueo del supermercado. Bajé un segundo, cerré la puerta y me di cuenta que las llaves están adentro. El motor está apagado.",
+                "ai_sum": "Confinamiento de llaves al interior del habitáculo. No hay riesgo humano inmediato. Requiere técnico cerrajero de emergencia.",
+                "prio": IncidentPriority.LOW,
+                "ai_class": "Cerrajería Automotriz",
+                "conf": 99.0,
+                "address": "Supermercado Ketal, Obrajes Calle 15",
+                "lat": -16.5250, "lon": -68.1120
+            },
+            {
+                "type": "overheating",
+                "desc": "Humo blanco intenso sale del capó, temperatura al máximo.",
+                "transcrip": "Iba subiendo y empezó a oler a dulce, de repente salió mucho vapor blanco. Me detuve inmediatamente.",
+                "ai_sum": "Fuga crítica de refrigerante / sobrecalentamiento. El olor a refrigerante evaporado sugiere manguera rota o falla severa del radiador. NO encender motor.",
+                "prio": IncidentPriority.CRITICAL,
+                "ai_class": "Fallo Sistema Refrigeración",
+                "conf": 95.5,
+                "address": "Subida a Ciudad Satélite, El Alto",
+                "lat": -16.5300, "lon": -68.1700
+            },
+            {
+                "type": "engine",
+                "desc": "Pérdida súbita de potencia y luz de 'Check Engine' parpadeando.",
+                "transcrip": "Estaba yendo normal y el auto empezó a cascabelear horrible, la luz del motor parpadea y no tiene fuerza para avanzar.",
+                "ai_sum": "Misfire (fallo de encendido) múltiple detectado. Luz parpadeante indica daño inminente al catalizador. Requiere escáner OBD2 y posible grúa.",
+                "prio": IncidentPriority.HIGH,
+                "ai_class": "Mecánica de Motor",
+                "conf": 91.2,
+                "address": "Avenida Costanera, Zona Sur",
+                "lat": -16.5400, "lon": -68.0900
+            }
         ]
-        
-        # Agregar datos históricos para llenar el dashboard
-        for i in range(10):
-            old_date = now - datetime.timedelta(days=i+2, hours=i)
-            incidents.append(Incident(
-                user_id=user1.id, vehicle_id=v1.id, workshop_id=w1.id, technician_id=techs[0].id,
-                incident_type="battery" if i % 2 == 0 else "tire",
-                description=f"Incidente histórico de prueba #{i}",
-                priority=IncidentPriority.LOW, status=IncidentStatus.COMPLETED,
-                address="Centro, La Paz", latitude=-16.4900, longitude=-68.1400,
-                ai_summary="Servicio de mantenimiento preventivo regular.",
-                final_cost=120.5 + (i * 10),
-                created_at=old_date, completed_at=old_date + datetime.timedelta(hours=1)
-            ))
+
+        # Añadir pendientes a la DB
+        for i, pd in enumerate(pendientes_data):
+            time_offset = now - datetime.timedelta(minutes=5 + (i * 12))
+            inc = Incident(
+                user_id=user1.id if i % 2 == 0 else user2.id,
+                vehicle_id=v1.id if i % 2 == 0 else v3.id,
+                incident_type=pd["type"],
+                description=pd["desc"],
+                audio_transcription=pd["transcrip"],
+                priority=pd["prio"],
+                status=IncidentStatus.PENDING,
+                address=pd["address"],
+                latitude=pd["lat"],
+                longitude=pd["lon"],
+                ai_summary=pd["ai_sum"],
+                ai_classification=pd["ai_class"],
+                ai_confidence=pd["conf"],
+                created_at=time_offset,
+                updated_at=time_offset
+            )
+            incidents.append(inc)
+
+        # --- 2. Incidentes COMPLETADOS (Para probar pestaña de FINANZAS) ---
+        # Se asignarán a 'Taller Mecánico El Rápido' (w1)
+        tipos_base = ["battery", "tire", "engine", "overheating"]
+        for i in range(1, 26):  # 25 completados para historial rico
+            dias_atras = random.randint(0, 30)
+            horas_atras = random.randint(1, 23)
+            time_created = now - datetime.timedelta(days=dias_atras, hours=horas_atras)
+            time_completed = time_created + datetime.timedelta(hours=random.uniform(1.0, 3.5))
+            
+            tipo = random.choice(tipos_base)
+            
+            base_cost = {
+                "battery": random.uniform(100.0, 350.0),
+                "tire": random.uniform(50.0, 150.0),
+                "engine": random.uniform(200.0, 1500.0),
+                "overheating": random.uniform(150.0, 800.0)
+            }
+            
+            final_cost = round(base_cost[tipo], 2)
+            
+            inc = Incident(
+                user_id=user3.id,
+                vehicle_id=v4.id,
+                workshop_id=w1.id,
+                technician_id=techs[0].id if tipo == "battery" else techs[1].id, # Machea técnicos de w1
+                incident_type=tipo,
+                description=f"Atención programada/emergencia histórica #{i}",
+                priority=IncidentPriority.LOW,
+                status=IncidentStatus.COMPLETED,
+                address="Servicio en ubicación registrada",
+                latitude=-16.5000 + random.uniform(-0.05, 0.05),
+                longitude=-68.1500 + random.uniform(-0.05, 0.05),
+                final_cost=final_cost,
+                created_at=time_created,
+                assigned_at=time_created + datetime.timedelta(minutes=15),
+                completed_at=time_completed
+            )
+            incidents.append(inc)
+
+        # --- 3. Incidentes EN PROGRESO ---
+        inc_prog = Incident(
+            user_id=user1.id, vehicle_id=v2.id, workshop_id=w1.id, technician_id=techs[1].id,
+            incident_type="engine", description="Mantenimiento correctivo en ruta.",
+            priority=IncidentPriority.MEDIUM, status=IncidentStatus.IN_PROGRESS,
+            address="Av. Busch", latitude=-16.5050, longitude=-68.1380,
+            ai_summary="Falla de sistema de admisión. El técnico está en el lugar evaluando.",
+            created_at=now - datetime.timedelta(hours=1), assigned_at=now - datetime.timedelta(minutes=40)
+        )
+        incidents.append(inc_prog)
 
         db.add_all(incidents)
         db.commit()
-        
-        # Evidencias simuladas (una para el incidente pendiente)
-        ev1 = Evidence(
-            incident_id=incidents[0].id,
-            evidence_type="text",
-            content="El cliente menciona que el tablero no enciende al girar la llave.",
-            ai_analysis="Confirmación visual de fallo en flujo eléctrico primario."
-        )
-        db.add(ev1)
-        db.commit()
 
-        print("✅ Base de datos RE-POBLADA con dataset realista para defensa.")
-        print(f"   - 3 Talleres, 9 Técnicos, 20+ Incidentes.")
+        print("Base de datos RE-POBLADA con dataset realista para defensa.")
+        print(f"   - 2 Talleres, 6 Técnicos, {len(incidents)} Incidentes.")
         print(f"   - Workshop principal TEST: elrapido@example.com / taller123")
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Error durante el seed: {e}")
+        print(f"Error durante el seed: {e}")
     finally:
         db.close()
 
