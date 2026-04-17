@@ -36,6 +36,18 @@ export class IncidentDetailComponent implements OnInit {
 
   readonly apiBase = environment.apiUrl.replace('/api', '');
 
+  // Mapeo de tipo de incidente → especialidades relevantes
+  private readonly typeSpecialtyMap: Record<string, string[]> = {
+    battery: ['baterías', 'eléctrico', 'electricidad', 'batería'],
+    tire: ['llantas', 'neumáticos', 'llanta', 'neumático'],
+    crash: ['carrocería', 'chasis', 'colisión', 'remolque'],
+    engine: ['motor', 'mecánica', 'mecánico', 'general'],
+    keys_lost: ['cerrajería', 'llaves', 'cerrajero'],
+    keys_locked: ['cerrajería', 'llaves', 'cerrajero'],
+    overheating: ['motor', 'radiador', 'refrigeración', 'mecánica'],
+    other: ['general', 'mecánica']
+  };
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -43,6 +55,7 @@ export class IncidentDetailComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loadIncident(id);
     this.ws.getTechnicians().subscribe(t => this.technicians = t.filter(x => x.is_available));
@@ -75,6 +88,29 @@ export class IncidentDetailComponent implements OnInit {
   getImageUrl(url: string): string {
     if (url.startsWith('http')) return url;
     return `${this.apiBase}/${url}`;
+  }
+
+  /** Returns sorted technicians: best match first */
+  get sortedTechnicians(): Technician[] {
+    if (!this.incident) return this.technicians;
+    return [...this.technicians].sort((a, b) => {
+      return this.getMatchScore(b) - this.getMatchScore(a);
+    });
+  }
+
+  /** Score 0-100 for how well a technician matches the incident type */
+  getMatchScore(tech: Technician): number {
+    if (!this.incident || !tech.specialties || tech.specialties.length === 0) return 0;
+    const relevant = this.typeSpecialtyMap[this.incident.incident_type] || [];
+    if (relevant.length === 0) return 50;
+    const techSpecs = tech.specialties.map(s => s.toLowerCase().trim());
+    const matchCount = relevant.filter(r => techSpecs.some(ts => ts.includes(r) || r.includes(ts))).length;
+    return Math.round((matchCount / relevant.length) * 100);
+  }
+
+  /** Check if technician is a recommended match */
+  isRecommended(tech: Technician): boolean {
+    return this.getMatchScore(tech) >= 50;
   }
 
   // === Acciones ===

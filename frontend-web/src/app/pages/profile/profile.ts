@@ -13,7 +13,7 @@ import { Workshop } from '../../models/interfaces';
 })
 export class ProfileComponent implements OnInit {
   workshop: Workshop | null = null;
-  loading = true;
+  loading = false;
   saving = false;
   success = '';
   error = '';
@@ -23,6 +23,7 @@ export class ProfileComponent implements OnInit {
   constructor(private ws: WorkshopService) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     this.ws.getProfile().subscribe({
       next: (w) => {
         this.workshop = w;

@@ -1,105 +1,132 @@
-@if (loading) {
-  <div class="loading">Cargando incidente...</div>
-} @else if (error && !incident) {
-  <div class="error-state">{{ error }}</div>
-} @else if (incident) {
-  <div class="detail-page">
-    <!-- Header -->
-    <div class="detail-header">
+<div class="page">
+  @if (loading) {
+    <div class="page-header">
+      <div class="skeleton" style="width: 200px; height: 32px;"></div>
+    </div>
+    <div class="detail-grid">
+      <div class="card">
+        <div class="skeleton" style="width: 40%; height: 20px; margin-bottom: 20px;"></div>
+        <div class="info-grid">
+          @for (i of [1,2,3,4]; track i) {
+            <div>
+              <div class="skeleton" style="width: 80px; height: 12px; margin-bottom: 8px;"></div>
+              <div class="skeleton" style="width: 100%; height: 16px;"></div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  } @else if (error && !incident) {
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">Error al cargar</div>
+        <div class="empty-desc">{{ error }}</div>
+        <button class="btn btn-primary btn-sm" style="margin-top: 16px;" (click)="ngOnInit()">Reintentar</button>
+      </div>
+    </div>
+  } @else if (incident) {
+    <div class="page-header detail-header animate-in">
       <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+          <button class="btn btn-ghost btn-icon btn-sm" routerLink="/incidents">←</button>
+          <span class="badge badge-info">{{ getTypeLabel(incident.incident_type) }}</span>
+        </div>
         <h2>Incidente #{{ incident.id }}</h2>
         <div class="header-tags">
-          <span class="type-badge">{{ getTypeLabel(incident.incident_type) }}</span>
-          <span class="priority-tag priority-{{ incident.priority }}">{{ incident.priority }}</span>
-          <span class="status-tag status-{{ incident.status }}">{{ getStatusLabel(incident.status) }}</span>
+          <span class="badge" [class]="'priority-' + incident.priority">{{ incident.priority }}</span>
+          <span class="badge" [class]="'status-' + incident.status">{{ getStatusLabel(incident.status) }}</span>
         </div>
       </div>
       <div class="header-actions">
         @if (incident.status === 'assigned') {
-          <button class="btn btn-success" (click)="showAcceptModal = true">✅ Aceptar</button>
-          <button class="btn btn-danger" (click)="showRejectModal = true">❌ Rechazar</button>
+          <button class="btn btn-success" (click)="showAcceptModal = true">Aceptar Servicio</button>
+          <button class="btn btn-ghost" (click)="showRejectModal = true" style="color: var(--danger-500)">Rechazar</button>
         }
         @if (incident.status === 'in_progress') {
-          <button class="btn btn-success" (click)="showCompleteModal = true">✅ Completar Servicio</button>
+          <button class="btn btn-success" (click)="showCompleteModal = true">Finalizar y Cobrar</button>
         }
       </div>
     </div>
 
     @if (error) {
-      <div class="alert alert-error">{{ error }}</div>
+      <div class="badge badge-danger animate-in" style="margin-bottom: 24px; width: 100%; justify-content: center; padding: 12px; text-transform: none;">
+        ⚠️ {{ error }}
+      </div>
     }
 
     <div class="detail-grid">
-      <!-- Info del Incidente -->
-      <div class="card">
-        <h3>📋 Información del Incidente</h3>
+      <!-- Info principal -->
+      <div class="card animate-in">
+        <h3>📋 Detalles del Reporte</h3>
         <div class="info-grid">
           <div class="info-item">
             <span class="info-label">Descripción</span>
-            <span class="info-value">{{ incident.description || 'Sin descripción' }}</span>
+            <span class="info-value">{{ incident.description || 'Sin descripción detallada' }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Ubicación</span>
-            <span class="info-value">{{ incident.address || (incident.latitude + ', ' + incident.longitude) }}</span>
+            <span class="info-label">Ubicación Actual</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="info-value">{{ incident.address || (incident.latitude + ', ' + incident.longitude) }}</span>
+              <a [href]="'https://www.google.com/maps?q=' + incident.latitude + ',' + incident.longitude" target="_blank" class="btn btn-ghost btn-icon btn-sm">📍</a>
+            </div>
           </div>
           <div class="info-item">
-            <span class="info-label">Fecha de Reporte</span>
-            <span class="info-value">{{ incident.created_at | date:'medium' }}</span>
+            <span class="info-label">Registrado el</span>
+            <span class="info-value">{{ incident.created_at | date:'dd/MM/yy HH:mm' }}</span>
           </div>
           @if (incident.estimated_arrival_minutes) {
             <div class="info-item">
-              <span class="info-label">ETA</span>
-              <span class="info-value">{{ incident.estimated_arrival_minutes }} minutos</span>
+              <span class="info-label">Tiempo Estimado</span>
+              <span class="info-value badge badge-info">{{ incident.estimated_arrival_minutes }} min</span>
             </div>
           }
         </div>
       </div>
 
-      <!-- Transcripción de Audio -->
-      @if (incident.audio_transcription) {
-        <div class="card">
-          <h3>🎙️ Transcripción de Audio</h3>
-          <div class="transcription-box">
-            <p>{{ incident.audio_transcription }}</p>
+      <!-- IA & Transcripción -->
+      @if (incident.ai_summary || incident.audio_transcription) {
+        <div class="card ai-card animate-in">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+            <span style="font-size: 20px;">🤖</span>
+            <h3 style="margin-bottom: 0; padding-bottom: 0; border: none;">Análisis de Inteligencia Artificial</h3>
+          </div>
+          
+          <div class="ai-content">
+            @if (incident.ai_confidence !== null) {
+              <div class="ai-item">
+                <span class="ai-label">Precisión del análisis</span>
+                <div class="confidence-bar">
+                  <div class="confidence-fill" [style.width.%]="incident.ai_confidence"></div>
+                  <span>{{ incident.ai_confidence }}%</span>
+                </div>
+              </div>
+            }
+            @if (incident.ai_summary) {
+              <div class="ai-item">
+                <span class="ai-label">Resumen Ejecutivo</span>
+                <div class="ai-summary-text">{{ incident.ai_summary }}</div>
+              </div>
+            }
+            @if (incident.audio_transcription) {
+              <div class="ai-item">
+                <span class="ai-label">Transcripción del Reporte Original</span>
+                <div class="transcription-box">
+                  <p>"{{ incident.audio_transcription }}"</p>
+                </div>
+              </div>
+            }
           </div>
         </div>
       }
 
-      <!-- Análisis de IA -->
-      <div class="card ai-card">
-        <h3>🤖 Análisis de Inteligencia Artificial</h3>
-        <div class="ai-content">
-          @if (incident.ai_classification) {
-            <div class="ai-item">
-              <span class="ai-label">Clasificación</span>
-              <span class="ai-value">{{ incident.ai_classification }}</span>
-            </div>
-          }
-          @if (incident.ai_confidence !== null) {
-            <div class="ai-item">
-              <span class="ai-label">Confianza</span>
-              <div class="confidence-bar">
-                <div class="confidence-fill" [style.width.%]="incident.ai_confidence"></div>
-                <span>{{ incident.ai_confidence }}%</span>
-              </div>
-            </div>
-          }
-          @if (incident.ai_summary) {
-            <div class="ai-item full">
-              <span class="ai-label">Resumen del Incidente</span>
-              <div class="ai-summary-text">{{ incident.ai_summary }}</div>
-            </div>
-          }
-        </div>
-      </div>
-
-      <!-- Información del Vehículo -->
+      <!-- Vehículo -->
       @if (incident.vehicle_brand) {
-        <div class="card">
-          <h3>🚗 Vehículo</h3>
+        <div class="card animate-in">
+          <h3>🚗 Información del Vehículo</h3>
           <div class="info-grid">
             <div class="info-item">
-              <span class="info-label">Vehículo</span>
+              <span class="info-label">Marca y Modelo</span>
               <span class="info-value">{{ incident.vehicle_brand }} {{ incident.vehicle_model }} ({{ incident.vehicle_year }})</span>
             </div>
             <div class="info-item">
@@ -108,7 +135,7 @@
             </div>
             <div class="info-item">
               <span class="info-label">Placa</span>
-              <span class="info-value">{{ incident.vehicle_license_plate }}</span>
+              <span class="info-value badge badge-muted">{{ incident.vehicle_license_plate }}</span>
             </div>
           </div>
         </div>
@@ -116,15 +143,18 @@
 
       <!-- Evidencias -->
       @if (incident.evidences && incident.evidences.length > 0) {
-        <div class="card">
-          <h3>📸 Evidencias</h3>
+        <div class="card animate-in">
+          <h3>📸 Evidencias Multimedia</h3>
           <div class="evidence-grid">
             @for (ev of incident.evidences; track ev.id) {
-              <div class="evidence-item">
+              <div class="evidence-item card card-hover">
                 @if (ev.evidence_type === 'image' && ev.file_url) {
                   <img [src]="getImageUrl(ev.file_url)" alt="Evidencia" class="evidence-img">
                 } @else if (ev.evidence_type === 'audio') {
-                  <div class="evidence-audio">🎵 Audio adjunto</div>
+                  <div class="evidence-audio">
+                    <span style="font-size: 24px; margin-bottom: 8px; display: block;">🎵</span>
+                    Audio adjunto
+                  </div>
                 } @else if (ev.evidence_type === 'text') {
                   <div class="evidence-text">{{ ev.content }}</div>
                 }
@@ -137,17 +167,17 @@
         </div>
       }
 
-      <!-- Historial -->
+      <!-- Timeline -->
       @if (incident.status_history && incident.status_history.length > 0) {
-        <div class="card">
-          <h3>📜 Historial de Estados</h3>
+        <div class="card animate-in">
+          <h3>📜 Historial del Servicio</h3>
           <div class="timeline">
             @for (entry of incident.status_history; track entry.id) {
               <div class="timeline-item">
                 <div class="timeline-dot"></div>
                 <div class="timeline-content">
                   <span class="timeline-status">{{ getStatusLabel(entry.status) }}</span>
-                  <span class="timeline-date">{{ entry.created_at | date:'medium' }}</span>
+                  <span class="timeline-date">{{ entry.created_at | date:'dd/MM/yy HH:mm' }}</span>
                   @if (entry.notes) {
                     <span class="timeline-notes">{{ entry.notes }}</span>
                   }
@@ -158,88 +188,147 @@
         </div>
       }
 
-      <!-- Pago -->
+      <!-- Facturación -->
       @if (incident.payment) {
-        <div class="card">
-          <h3>💳 Pago</h3>
+        <div class="card animate-in" style="border-color: var(--success-500);">
+          <h3>💳 Detalles de Facturación</h3>
           <div class="info-grid">
             <div class="info-item">
-              <span class="info-label">Monto Total</span>
+              <span class="info-label">Costo Total del Servicio</span>
               <span class="info-value money">Bs. {{ incident.payment.amount }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Comisión Plataforma</span>
-              <span class="info-value">Bs. {{ incident.payment.commission_amount }} ({{ incident.payment.commission_percent }}%)</span>
+              <span class="info-label">Comisión</span>
+              <span class="info-value">{{ incident.payment.commission_percent }}% (Bs. {{ incident.payment.commission_amount }})</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Estado</span>
-              <span class="info-value">{{ incident.payment.payment_status }}</span>
+              <span class="info-label">Estado del Pago</span>
+              <span class="badge badge-success">{{ incident.payment.payment_status | uppercase }}</span>
             </div>
           </div>
         </div>
       }
     </div>
 
-    <!-- Modal: Aceptar -->
+    <!-- Modals -->
     @if (showAcceptModal) {
       <div class="modal-overlay" (click)="showAcceptModal = false">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>Aceptar Incidente</h3>
-          <p>Selecciona un técnico disponible:</p>
-          <select [(ngModel)]="selectedTechId" class="form-select">
-            <option [ngValue]="null" disabled>-- Seleccionar técnico --</option>
-            @for (tech of technicians; track tech.id) {
-              <option [ngValue]="tech.id">{{ tech.name }} - {{ tech.specialties?.join(', ') }}</option>
+        <div class="modal-content animate-in" (click)="$event.stopPropagation()" style="max-width: 550px;">
+          <h3>🧠 Asignación Inteligente de Técnico</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 8px;">Selecciona el técnico más adecuado para este incidente.</p>
+
+          @if (incident) {
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+              <span class="badge badge-info">{{ getTypeLabel(incident.incident_type) }}</span>
+              <span class="badge" [class]="'priority-' + incident.priority">{{ incident.priority | uppercase }}</span>
+            </div>
+          }
+
+          <div class="tech-selection-list">
+            @for (tech of sortedTechnicians; track tech.id) {
+              <div
+                class="tech-option"
+                [class.selected]="selectedTechId === tech.id"
+                [class.recommended]="isRecommended(tech)"
+                (click)="selectedTechId = tech.id"
+              >
+                <div class="tech-option-header">
+                  <div class="tech-option-info">
+                    <div class="tech-option-avatar">👨‍🔧</div>
+                    <div>
+                      <div class="tech-option-name">
+                        {{ tech.name }}
+                        @if (isRecommended(tech)) {
+                          <span class="match-badge">⭐ Recomendado</span>
+                        }
+                      </div>
+                      <span class="tech-option-phone">{{ tech.phone }}</span>
+                    </div>
+                  </div>
+                  <div class="tech-option-check">
+                    @if (selectedTechId === tech.id) {
+                      ✓
+                    }
+                  </div>
+                </div>
+                @if (tech.specialties && tech.specialties.length > 0) {
+                  <div class="tech-option-specs">
+                    @for (spec of tech.specialties; track spec) {
+                      <span class="badge badge-info" style="font-size: 10px; padding: 2px 8px;">{{ spec }}</span>
+                    }
+                  </div>
+                }
+                @if (getMatchScore(tech) > 0) {
+                  <div class="tech-match-bar">
+                    <span class="match-label">Compatibilidad</span>
+                    <div class="match-bar-track">
+                      <div class="match-bar-fill" [style.width.%]="getMatchScore(tech)"
+                           [class.high-match]="getMatchScore(tech) >= 50"
+                           [class.low-match]="getMatchScore(tech) < 50"></div>
+                    </div>
+                    <span class="match-percent">{{ getMatchScore(tech) }}%</span>
+                  </div>
+                }
+              </div>
             }
-          </select>
-          <div class="modal-actions">
-            <button class="btn btn-outline" (click)="showAcceptModal = false">Cancelar</button>
-            <button class="btn btn-success" (click)="acceptIncident()" [disabled]="!selectedTechId || actionLoading">
-              {{ actionLoading ? 'Procesando...' : 'Confirmar' }}
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+            <button class="btn btn-ghost" (click)="showAcceptModal = false">Cancelar</button>
+            <button class="btn btn-primary" (click)="acceptIncident()" [disabled]="!selectedTechId || actionLoading">
+              {{ actionLoading ? 'Asignando...' : 'Confirmar y Empezar' }}
             </button>
           </div>
         </div>
       </div>
     }
 
-    <!-- Modal: Rechazar -->
     @if (showRejectModal) {
       <div class="modal-overlay" (click)="showRejectModal = false">
-        <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-content animate-in" (click)="$event.stopPropagation()">
           <h3>Rechazar Incidente</h3>
-          <p>¿Por qué rechazas este incidente?</p>
-          <textarea [(ngModel)]="rejectReason" class="form-textarea" placeholder="Motivo (opcional)"></textarea>
-          <div class="modal-actions">
-            <button class="btn btn-outline" (click)="showRejectModal = false">Cancelar</button>
-            <button class="btn btn-danger" (click)="rejectIncident()" [disabled]="actionLoading">
-              {{ actionLoading ? 'Procesando...' : 'Rechazar' }}
+          <p>Esta acción no se puede deshacer. ¿Por qué rechazas este reporte?</p>
+          
+          <div class="form-group" style="margin-top: 20px;">
+            <label>Motivo del rechazo</label>
+            <textarea [(ngModel)]="rejectReason" class="form-input" style="min-height: 100px;" placeholder="Ej. No tenemos repuestos disponibles en este momento."></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
+            <button class="btn btn-ghost" (click)="showRejectModal = false">Cerrar</button>
+            <button class="btn btn-primary" (click)="rejectIncident()" [disabled]="actionLoading" style="background: var(--gradient-danger);">
+              {{ actionLoading ? 'Procesando...' : 'Confirmar Rechazo' }}
             </button>
           </div>
         </div>
       </div>
     }
 
-    <!-- Modal: Completar -->
     @if (showCompleteModal) {
       <div class="modal-overlay" (click)="showCompleteModal = false">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h3>Completar Servicio</h3>
-          <div class="form-group">
-            <label>Costo final (Bs.)</label>
-            <input type="number" [(ngModel)]="finalCost" class="form-input" min="0" step="0.01">
+        <div class="modal-content animate-in" (click)="$event.stopPropagation()">
+          <h3>Finalizar Servicio</h3>
+          <p>Ingresa los detalles finales para generar el cobro.</p>
+          
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+            <div class="form-group">
+              <label>Costo final del servicio (Bs.)</label>
+              <input type="number" [(ngModel)]="finalCost" class="form-input" min="0" step="1" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Notas de finalización</label>
+              <textarea [(ngModel)]="completionNotes" class="form-input" style="min-height: 100px;" placeholder="¿Qué reparaciones se realizaron?"></textarea>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Notas del servicio</label>
-            <textarea [(ngModel)]="completionNotes" class="form-textarea" placeholder="Descripción del trabajo realizado"></textarea>
-          </div>
-          <div class="modal-actions">
-            <button class="btn btn-outline" (click)="showCompleteModal = false">Cancelar</button>
-            <button class="btn btn-success" (click)="completeIncident()" [disabled]="actionLoading || finalCost <= 0">
-              {{ actionLoading ? 'Procesando...' : 'Completar' }}
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
+            <button class="btn btn-ghost" (click)="showCompleteModal = false">Volver</button>
+            <button class="btn btn-primary" (click)="completeIncident()" [disabled]="actionLoading || finalCost <= 0">
+              {{ actionLoading ? 'Guardando...' : 'Completar y Cobrar' }}
             </button>
           </div>
         </div>
       </div>
     }
-  </div>
-}
+  }
+</div>

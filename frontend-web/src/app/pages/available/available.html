@@ -1,47 +1,115 @@
 <div class="page">
   <div class="page-header">
     <div>
-      <h2>Incidentes Disponibles</h2>
-      <span class="page-subtitle">Emergencias sin taller asignado que puedes tomar</span>
+      <h2>🆘 Incidentes Disponibles</h2>
+      <span class="page-subtitle">Emergencias sin taller asignado — Analiza y acepta las que puedas atender</span>
     </div>
-    <button class="btn btn-ghost btn-sm" (click)="loadIncidents()">🔄 Actualizar</button>
+    <div class="header-actions">
+      <span class="live-indicator">
+        <span class="live-dot"></span>
+        En vivo
+      </span>
+      <button class="btn btn-ghost btn-sm" (click)="loadIncidents()">🔄 Actualizar</button>
+    </div>
   </div>
 
   @if (loading) {
     <div class="cards-grid">
-      @for (i of [1,2,3]; track i) {
+      @for (i of [1,2,3,4,5,6]; track i) {
         <div class="card">
-          <div class="skeleton" style="width: 50%; height: 16px; margin-bottom: 12px;"></div>
-          <div class="skeleton" style="width: 80%; height: 14px; margin-bottom: 8px;"></div>
-          <div class="skeleton" style="width: 60%; height: 14px;"></div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+            <div class="skeleton" style="width: 80px; height: 22px; border-radius: 99px;"></div>
+            <div class="skeleton" style="width: 60px; height: 14px;"></div>
+          </div>
+          <div class="skeleton" style="width: 70%; height: 18px; margin-bottom: 10px;"></div>
+          <div class="skeleton" style="width: 100%; height: 13px; margin-bottom: 6px;"></div>
+          <div class="skeleton" style="width: 80%; height: 13px; margin-bottom: 20px;"></div>
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <div class="skeleton" style="width: 70px; height: 20px; border-radius: 99px;"></div>
+            <div class="skeleton" style="width: 70px; height: 20px; border-radius: 99px;"></div>
+          </div>
+          <div class="skeleton" style="width: 100%; height: 36px; border-radius: 10px;"></div>
         </div>
       }
     </div>
   } @else if (incidents.length === 0) {
-    <div class="card">
+    <div class="card empty-card">
       <div class="empty-state">
         <div class="empty-icon">🎉</div>
-        <div class="empty-title">No hay emergencias pendientes</div>
-        <div class="empty-desc">Todas las emergencias han sido atendidas. ¡Buen trabajo!</div>
+        <div class="empty-title">¡Todo bajo control!</div>
+        <div class="empty-desc">No hay emergencias pendientes en este momento. Todas las solicitudes han sido atendidas.</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top: 16px;" (click)="loadIncidents()">Verificar de nuevo</button>
       </div>
     </div>
   } @else {
+    <!-- Stats Bar -->
+    <div class="stats-bar animate-in">
+      <div class="stat-pill">
+        <span class="stat-number">{{ incidents.length }}</span>
+        <span class="stat-label">Emergencias</span>
+      </div>
+      <div class="stat-pill critical" *ngIf="getCriticalCount() > 0">
+        <span class="stat-number">{{ getCriticalCount() }}</span>
+        <span class="stat-label">Críticas</span>
+      </div>
+      <div class="stat-pill high" *ngIf="getHighCount() > 0">
+        <span class="stat-number">{{ getHighCount() }}</span>
+        <span class="stat-label">Alta prioridad</span>
+      </div>
+    </div>
+
     <div class="cards-grid">
       @for (inc of incidents; track inc.id) {
         <a [routerLink]="['/incidents', inc.id]" class="incident-card card card-hover animate-in">
+          <!-- Priority + Urgency Strip -->
+          <div class="card-priority-strip" [class]="'strip-' + inc.priority"></div>
+
           <div class="card-top">
-            <span class="badge" [class]="'priority-' + inc.priority">{{ inc.priority | uppercase }}</span>
+            <span class="badge" [class]="'priority-' + inc.priority">
+              {{ getPriorityIcon(inc.priority) }} {{ getPriorityLabel(inc.priority) }}
+            </span>
             <span class="time-ago">{{ timeAgo(inc.created_at) }}</span>
           </div>
+
+          <!-- Type & Description -->
           <div class="card-body">
             <span class="card-type">{{ getTypeLabel(inc.incident_type) }}</span>
             @if (inc.description) {
-              <p class="card-desc">{{ inc.description | slice:0:120 }}...</p>
+              <p class="card-desc">{{ inc.description | slice:0:100 }}{{ inc.description.length > 100 ? '...' : '' }}</p>
             }
           </div>
+
+          <!-- AI Insights -->
+          @if (inc.ai_summary || inc.ai_classification || inc.ai_confidence) {
+            <div class="ai-insights">
+              <div class="ai-badge">
+                <span class="ai-sparkle">🤖</span>
+                <span>Análisis IA</span>
+              </div>
+              @if (inc.ai_confidence) {
+                <div class="ai-confidence">
+                  <div class="confidence-bar-mini">
+                    <div class="confidence-fill-mini" [style.width.%]="inc.ai_confidence"></div>
+                  </div>
+                  <span class="confidence-text">{{ inc.ai_confidence }}%</span>
+                </div>
+              }
+            </div>
+            @if (inc.ai_summary) {
+              <p class="ai-summary-preview">{{ inc.ai_summary | slice:0:80 }}...</p>
+            }
+          }
+
+          <!-- Location & Metadata -->
           <div class="card-footer">
-            <span class="card-location">📍 {{ inc.address || 'Sin dirección' }}</span>
+            <span class="card-location">📍 {{ inc.address || 'Ubicación GPS disponible' }}</span>
             <span class="card-id">#{{ inc.id }}</span>
+          </div>
+
+          <!-- CTA -->
+          <div class="card-cta">
+            <span class="cta-text">Ver detalles y aceptar</span>
+            <span class="cta-arrow">→</span>
           </div>
         </a>
       }

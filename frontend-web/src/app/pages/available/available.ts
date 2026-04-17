@@ -18,6 +18,7 @@ export class AvailableComponent implements OnInit {
   constructor(private ws: WorkshopService) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     this.loadIncidents();
   }
 
@@ -29,6 +30,14 @@ export class AvailableComponent implements OnInit {
     });
   }
 
+  getCriticalCount(): number {
+    return this.incidents.filter(i => i.priority === 'critical').length;
+  }
+
+  getHighCount(): number {
+    return this.incidents.filter(i => i.priority === 'high').length;
+  }
+
   getTypeLabel(type: string): string {
     const map: Record<string, string> = {
       battery: '🔋 Batería', tire: '🛞 Llanta', crash: '💥 Accidente',
@@ -38,6 +47,20 @@ export class AvailableComponent implements OnInit {
     return map[type] || type;
   }
 
+  getPriorityLabel(p: string): string {
+    const map: Record<string, string> = {
+      critical: 'CRÍTICO', high: 'ALTA', medium: 'MEDIA', low: 'BAJA'
+    };
+    return map[p] || p.toUpperCase();
+  }
+
+  getPriorityIcon(p: string): string {
+    const map: Record<string, string> = {
+      critical: '🚨', high: '⚠️', medium: '🔶', low: '🟢'
+    };
+    return map[p] || '🔶';
+  }
+
   getPriorityClass(p: string): string {
     return `priority-${p}`;
   }
@@ -45,6 +68,7 @@ export class AvailableComponent implements OnInit {
   timeAgo(date: string): string {
     const diff = Date.now() - new Date(date).getTime();
     const min = Math.floor(diff / 60000);
+    if (min < 1) return 'Ahora';
     if (min < 60) return `hace ${min} min`;
     const hrs = Math.floor(min / 60);
     if (hrs < 24) return `hace ${hrs}h`;

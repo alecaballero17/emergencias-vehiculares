@@ -1,0 +1,140 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h2>💰 Finanzas y Comisiones</h2>
+      <span class="page-subtitle">Control de ingresos, comisiones y pagos a la plataforma (10%)</span>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="summary-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="card">
+          <div class="skeleton" style="width: 50%; height: 12px; margin-bottom: 16px;"></div>
+          <div class="skeleton" style="width: 70%; height: 28px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="width: 40%; height: 12px;"></div>
+        </div>
+      }
+    </div>
+    <div class="card" style="margin-top: 24px;">
+      @for (i of [1,2,3]; track i) {
+        <div class="skeleton-row" style="display: flex; gap: 16px; margin-bottom: 16px;">
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 10px;"></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div class="skeleton" style="width: 60%; height: 14px;"></div>
+            <div class="skeleton" style="width: 40%; height: 12px;"></div>
+          </div>
+          <div class="skeleton" style="width: 80px; height: 20px; border-radius: 99px;"></div>
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+      <div class="card summary-card card-revenue animate-in">
+        <div class="summary-icon">💵</div>
+        <div class="summary-body">
+          <span class="summary-label">Ingresos Totales</span>
+          <span class="summary-value">Bs. {{ summary.totalRevenue | number:'1.2-2' }}</span>
+          <span class="summary-detail">{{ summary.completedServices }} servicios completados</span>
+        </div>
+      </div>
+
+      <div class="card summary-card card-commission animate-in">
+        <div class="summary-icon">🏛️</div>
+        <div class="summary-body">
+          <span class="summary-label">Comisión Plataforma (10%)</span>
+          <span class="summary-value commission-value">- Bs. {{ summary.totalCommission | number:'1.2-2' }}</span>
+          <span class="summary-detail">Porcentaje fijo por servicio</span>
+        </div>
+      </div>
+
+      <div class="card summary-card card-net animate-in">
+        <div class="summary-icon">✅</div>
+        <div class="summary-body">
+          <span class="summary-label">Ganancia Neta</span>
+          <span class="summary-value net-value">Bs. {{ summary.netEarnings | number:'1.2-2' }}</span>
+          <span class="summary-detail">Después de comisiones</span>
+        </div>
+      </div>
+
+      <div class="card summary-card card-pending animate-in">
+        <div class="summary-icon">⏳</div>
+        <div class="summary-body">
+          <span class="summary-label">Servicios Activos</span>
+          <span class="summary-value pending-value">{{ summary.pendingPayments }}</span>
+          <span class="summary-detail">Pendientes de cobro</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commission Explanation Banner -->
+    <div class="commission-banner animate-in">
+      <div class="banner-icon">🤝</div>
+      <div class="banner-content">
+        <h4>Modelo de Comisión Transparente</h4>
+        <p>La plataforma retiene un <strong>10%</strong> del precio cobrado al cliente como comisión por el servicio de conexión, gestión de incidentes e inteligencia artificial aplicada. El <strong>90%</strong> restante es tu ganancia neta.</p>
+      </div>
+    </div>
+
+    <!-- Transaction History -->
+    @if (records.length > 0) {
+      <div class="card animate-in" style="margin-top: 24px;">
+        <div class="section-header">
+          <h3>📜 Historial de Transacciones</h3>
+          <span class="badge badge-muted">{{ records.length }} registros</span>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>Tipo</th>
+              <th>Fecha</th>
+              <th>Cobrado</th>
+              <th>Comisión (10%)</th>
+              <th>Neto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of records; track r.incidentId) {
+              <tr class="animate-in">
+                <td class="td-id">
+                  <a [routerLink]="['/incidents', r.incidentId]" class="link-id">#{{ r.incidentId }}</a>
+                </td>
+                <td>
+                  <span class="type-cell">
+                    <span class="type-emoji">{{ getTypeEmoji(r.incidentType) }}</span>
+                    {{ getTypeLabel(r.incidentType) }}
+                  </span>
+                </td>
+                <td class="td-date">{{ r.date | date:'dd/MM/yy' }}</td>
+                <td class="td-money">Bs. {{ r.amount | number:'1.2-2' }}</td>
+                <td class="td-commission">- Bs. {{ r.commission | number:'1.2-2' }}</td>
+                <td class="td-net">Bs. {{ r.net | number:'1.2-2' }}</td>
+                <td><span class="badge badge-success">Pagado</span></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="3"><strong>TOTALES</strong></td>
+              <td class="td-money"><strong>Bs. {{ summary.totalRevenue | number:'1.2-2' }}</strong></td>
+              <td class="td-commission"><strong>- Bs. {{ summary.totalCommission | number:'1.2-2' }}</strong></td>
+              <td class="td-net"><strong>Bs. {{ summary.netEarnings | number:'1.2-2' }}</strong></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    } @else {
+      <div class="card animate-in" style="margin-top: 24px;">
+        <div class="empty-state">
+          <div class="empty-icon">💳</div>
+          <div class="empty-title">Sin transacciones</div>
+          <div class="empty-desc">Aún no tienes servicios completados. Cuando finalices tu primer servicio, aparecerá aquí.</div>
+        </div>
+      </div>
+    }
+  }
+</div>

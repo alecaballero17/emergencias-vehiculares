@@ -20,15 +20,13 @@
   } @else {
     <div class="profile-card card">
       @if (success) {
-        <div class="success-alert">
-          <span>✅</span>
-          <span>{{ success }}</span>
+        <div class="badge badge-success animate-in" style="margin-bottom: 24px; width: 100%; justify-content: center; padding: 12px; text-transform: none; font-size: 13px;">
+          <span>✅ {{ success }}</span>
         </div>
       }
       @if (error) {
-        <div class="error-alert">
-          <span>⚠️</span>
-          <span>{{ error }}</span>
+        <div class="badge badge-danger animate-in" style="margin-bottom: 24px; width: 100%; justify-content: center; padding: 12px; text-transform: none; font-size: 13px;">
+          <span>⚠️ {{ error }}</span>
         </div>
       }
 

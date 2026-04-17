@@ -18,6 +18,7 @@ export const routes: Routes = [
       { path: 'notifications', loadComponent: () => import('./pages/notifications/notifications').then(m => m.NotificationsComponent) },
       { path: 'profile', loadComponent: () => import('./pages/profile/profile').then(m => m.ProfileComponent) },
       { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then(m => m.VehiclesComponent) },
+      { path: 'finance', loadComponent: () => import('./pages/finance/finance').then(m => m.FinanceComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

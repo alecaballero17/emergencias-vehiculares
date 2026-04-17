@@ -14,17 +14,17 @@ import { Incident } from '../../models/interfaces';
 })
 export class IncidentsComponent implements OnInit {
   incidents: Incident[] = [];
-  loading = true;
+  loading = false;
   statusFilter = '';
 
   constructor(private ws: WorkshopService) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     this.loadIncidents();
   }
 
   loadIncidents(): void {
-    this.loading = true;
     this.ws.getAssignedIncidents(this.statusFilter || undefined).subscribe({
       next: (data) => { this.incidents = data; this.loading = false; },
       error: () => { this.loading = false; }

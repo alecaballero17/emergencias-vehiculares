@@ -13,7 +13,7 @@ import { Vehicle } from '../../models/interfaces';
 })
 export class VehiclesComponent implements OnInit {
   vehicles: Vehicle[] = [];
-  loading = true;
+  loading = false;
   saving = false;
   error = '';
   showForm = false;
@@ -31,11 +31,11 @@ export class VehiclesComponent implements OnInit {
   constructor(private vehicleService: VehicleService) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     this.loadVehicles();
   }
 
   loadVehicles(): void {
-    this.loading = true;
     this.vehicleService.list().subscribe({
       next: (data) => { this.vehicles = data; this.loading = false; },
       error: () => { this.error = 'Error al cargar vehículos'; this.loading = false; }

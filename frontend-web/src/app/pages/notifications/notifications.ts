@@ -12,11 +12,12 @@ import { Notification } from '../../models/interfaces';
 })
 export class NotificationsComponent implements OnInit {
   notifications: Notification[] = [];
-  loading = true;
+  loading = false;
 
   constructor(private ws: WorkshopService) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     this.ws.getNotifications().subscribe({
       next: (data) => { this.notifications = data; this.loading = false; },
       error: () => { this.loading = false; }

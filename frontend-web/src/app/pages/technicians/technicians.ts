@@ -13,7 +13,7 @@ import { Technician } from '../../models/interfaces';
 })
 export class TechniciansComponent implements OnInit {
   technicians: Technician[] = [];
-  loading = true;
+  loading = false;
   showForm = false;
   editingId: number | null = null;
 
@@ -23,11 +23,11 @@ export class TechniciansComponent implements OnInit {
   constructor(private ws: WorkshopService) {}
 
   ngOnInit(): void {
+    setTimeout(() => { this.loading = false; }, 3000);
     this.loadTechnicians();
   }
 
   loadTechnicians(): void {
-    this.loading = true;
     this.ws.getTechnicians().subscribe({
       next: (data) => { this.technicians = data; this.loading = false; },
       error: () => { this.loading = false; }

@@ -1,0 +1,241 @@
+.page {
+  max-width: 1200px;
+}
+
+.page-header {
+  margin-bottom: 28px;
+
+  h2 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: block;
+  }
+}
+
+// ═══════════════════════════
+// Summary Cards Grid
+// ═══════════════════════════
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  &.card-revenue::before {
+    background: var(--gradient-success);
+  }
+  &.card-commission::before {
+    background: var(--gradient-warning);
+  }
+  &.card-net::before {
+    background: var(--gradient-primary);
+  }
+  &.card-pending::before {
+    background: var(--gradient-accent);
+  }
+}
+
+.summary-icon {
+  font-size: 32px;
+  min-width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: var(--radius-md);
+}
+
+.summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+
+  &.commission-value {
+    color: var(--warning-500);
+  }
+
+  &.net-value {
+    background: var(--gradient-success);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  &.pending-value {
+    color: var(--accent-400);
+  }
+}
+
+.summary-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+// ═══════════════════════════
+// Commission Banner
+// ═══════════════════════════
+.commission-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: var(--radius-lg);
+  margin-bottom: 0;
+
+  .banner-icon {
+    font-size: 28px;
+    min-width: 40px;
+  }
+
+  .banner-content {
+    h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+
+      strong {
+        color: var(--primary-400);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════
+// Section Header
+// ═══════════════════════════
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+}
+
+// ═══════════════════════════
+// Table Enhancements
+// ═══════════════════════════
+.td-id {
+  font-weight: 600;
+}
+
+.link-id {
+  color: var(--primary-400);
+  font-weight: 600;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--primary-300);
+    text-decoration: underline;
+  }
+}
+
+.type-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .type-emoji {
+    font-size: 16px;
+  }
+}
+
+.td-date {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.td-money {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.td-commission {
+  font-weight: 600;
+  color: var(--warning-500);
+  font-size: 13px;
+}
+
+.td-net {
+  font-weight: 700;
+  color: var(--success-500);
+}
+
+.totals-row {
+  td {
+    border-top: 2px solid var(--border-color-strong) !important;
+    border-bottom: none !important;
+    padding-top: 16px;
+    font-size: 14px;
+  }
+}
+
+// ═══════════════════════════
+// Skeleton
+// ═══════════════════════════
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}

@@ -1,5 +1,36 @@
-# Diagramas UML - PUDS
+# 📄 Documentación Técnica - Primer Parcial
 # Plataforma Inteligente de Atención de Emergencias Vehiculares
+
+---
+
+## 1. Perfil del Proyecto
+
+### 1.1 Introducción
+Este proyecto surge como respuesta a la necesidad de optimizar la atención de emergencias vehiculares en entornos urbanos y carreteras. La plataforma conecta a conductores en situaciones críticas con talleres mecánicos capacitados, utilizando herramientas de Inteligencia Artificial para agilizar el diagnóstico y la asignación.
+
+### 1.2 Objetivo General
+Desarrollar una plataforma inteligente de atención de emergencias vehiculares que permita conectar usuarios con talleres mecánicos mediante el análisis automatizado de incidentes utilizando datos multimodales (imagen, audio, texto y geolocalización), optimizando el proceso de diagnóstico preliminar, priorización y asignación del servicio.
+
+### 1.3 Objetivos Específicos
+- Diseñar una arquitectura basada en microservicios que soporte procesamiento en tiempo real.
+- Implementar una aplicación móvil para usuarios y una aplicación web para talleres (Angular).
+- Integrar mecanismos de geolocalización para ubicar incidentes y proveedores.
+- Incorporar módulos de IA para transcripción de audio, clasificación de incidentes y análisis de imágenes.
+- Implementar un sistema de priorización y asignación inteligente con gestión de comisiones (10%).
+
+### 1.4 Descripción del Problema
+Actualmente, el proceso de auxilio vial es ineficiente por la dependencia de llamadas, falta de información clara y tiempos de respuesta lentos. Los talleres no cuentan con herramientas para priorizar casos ni evaluar la naturaleza del problema de forma automática.
+
+### 1.5 Alcance
+El sistema cubre desde el registro del usuario/vehículo, el reporte multimodal de la emergencia, el análisis inteligente del incidente, hasta la asignación del técnico, ejecución del servicio, cobro y pago de comisiones de la plataforma.
+
+---
+
+## 2. Proceso de Desarrollo (PUDS)
+
+### 2.1 Flujo de Trabajo: Captura de Requisitos
+En esta fase se identifican los actores (Cliente, Taller, Sistema IA) y sus interacciones principales.
+
 
 > **Instrucciones**: Cada diagrama está en formato Mermaid. Puedes:
 > 1. Copiar el código y pegarlo en [Mermaid Live Editor](https://mermaid.live) para exportar como PNG/SVG
@@ -8,7 +39,7 @@
 
 ---
 
-## 1. Diagrama de Casos de Uso - Cliente
+#### A. Diagrama de Casos de Uso - Cliente
 
 ```mermaid
 graph LR
@@ -58,7 +89,7 @@ graph LR
 
 ---
 
-## 2. Diagrama de Casos de Uso - Taller
+#### B. Diagrama de Casos de Uso - Taller
 
 ```mermaid
 graph LR
@@ -110,7 +141,7 @@ graph LR
 
 ---
 
-## 3. Diagrama de Casos de Uso - Sistema/IA
+#### C. Diagrama de Casos de Uso - Sistema/IA
 
 ```mermaid
 graph LR
@@ -156,7 +187,10 @@ graph LR
 
 ---
 
-## 4. Diagrama de Clases - Modelo de Datos
+### 2.2 Flujo de Trabajo: Análisis
+En esta fase se define la estructura de datos y las reglas de negocio del sistema.
+
+#### A. Diagrama de Clases - Modelo de Datos
 
 ```mermaid
 classDiagram
@@ -355,7 +389,10 @@ classDiagram
 
 ---
 
-## 6. Diagrama de Secuencia - Reporte de Emergencia
+### 2.3 Flujo de Trabajo: Diseño
+Se detallan las interacciones temporales y la arquitectura de componentes.
+
+#### A. Diagrama de Secuencia - Reporte de Emergencia
 
 ```mermaid
 sequenceDiagram
@@ -415,7 +452,10 @@ sequenceDiagram
 
 ---
 
-## 7. Diagrama de Secuencia - Taller Aceptar/Rechazar/Completar
+### 2.4 Flujo de Trabajo: Implementación
+Se describe la arquitectura física y los componentes de software utilizados.
+
+#### A. Diagrama de Secuencia - Taller Aceptar/Rechazar/Completar
 
 ```mermaid
 sequenceDiagram
@@ -595,9 +635,7 @@ graph TB
     Alembic --> DB
 ```
 
----
-
-## 10. Diagrama de Actividades - Flujo Completo de Emergencia
+#### B. Diagrama de Actividades - Flujo Completo de Emergencia
 
 ```mermaid
 flowchart TD
@@ -667,9 +705,7 @@ flowchart TD
     WaitNode --> Assignment
 ```
 
----
-
-## 11. Diagrama de Despliegue - Arquitectura Física
+#### C. Diagrama de Despliegue - Arquitectura Física
 
 ```mermaid
 graph TB
@@ -718,3 +754,21 @@ graph TB
     FastAPI -->|HTTPS API Key| OpenAI
     FastAPI -->|HTTPS Service Account| FCM
 ```
+
+### 2.5 Flujo de Trabajo: Pruebas
+Se realizaron pruebas unitarias y de integración para asegurar la robustez del sistema.
+
+#### Casos de Prueba Verificados:
+1. **Atención de Emergencia (Batería):** Verificación de transcripción y clasificación automática.
+2. **Asignación Inteligente:** Selección del técnico basada en especialidad (ej. Electricista para batería).
+3. **Cálculo de Comisiones:** Verificación de la retención del 10% en el módulo de finanzas.
+4. **Notificaciones Push:** Recepción de alertas en tiempo real tanto en la App Móvil como en el Panel Web.
+
+---
+
+## Conclusión
+La plataforma "Emergencias Vehiculares" logra integrar exitosamente módulos de Inteligencia Artificial en un flujo de negocio real, permitiendo una trazabilidad completa y una asignación eficiente de recursos que reduce significativamente los tiempos de respuesta.
+
+## Recomendación
+Se recomienda el uso de modelos de IA más robustos (GPT-4o) para casos de accidentes graves donde la precisión visual es crítica para la vida de los ocupantes.
+
