@@ -1,65 +1,100 @@
-<div class="login-container">
-  <div class="login-bg">
-    <div class="bg-gradient"></div>
-    <div class="bg-grid"></div>
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
+<div class="login-wrapper">
+  <!-- Dynamic Left Side: Branding & Theme -->
+  <div class="login-brand-side">
+    <div class="brand-content">
+      <div class="logo-floating">🚗</div>
+      <h1 class="brand-title">Emergencias<br>Vehiculares</h1>
+      <p class="brand-subtitle">Plataforma Inteligente para Talleres</p>
+      
+      <div class="features-list">
+        <div class="feature-item">
+          <span class="feature-icon">🤖</span>
+          <span>Análisis IA de incidentes</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📍</span>
+          <span>Geolocalización en tiempo real</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">⚡</span>
+          <span>Asignación inteligente</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="brand-overlay"></div>
   </div>
 
-  <div class="login-card">
-    <div class="login-header">
-      <div class="logo-icon">🚗</div>
-      <h1>Emergencias Vehiculares</h1>
-      <p>Panel de Administración de Talleres</p>
+  <!-- Right Side: Login Form -->
+  <div class="login-form-side">
+    <div class="login-bg">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
-      @if (error) {
-        <div class="error-alert">
-          <span class="error-icon">⚠️</span>
-          <span>{{ error }}</span>
-        </div>
-      }
-
-      <div class="form-group">
-        <label for="email">Correo Electrónico</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          class="form-input"
-          placeholder="taller@ejemplo.com"
-          [class.invalid]="form.get('email')?.touched && form.get('email')?.invalid"
-        />
+    <div class="login-card">
+      <div class="login-header">
+        <h2>Bienvenido de vuelta</h2>
+        <p>Ingresa tus credenciales para continuar</p>
       </div>
 
-      <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          class="form-input"
-          placeholder="••••••••"
-          [class.invalid]="form.get('password')?.touched && form.get('password')?.invalid"
-        />
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-lg login-btn" [disabled]="loading || form.invalid">
-        @if (loading) {
-          <span class="spinner"></span>
-          <span>Ingresando...</span>
-        } @else {
-          <span>Iniciar Sesión</span>
-          <span>→</span>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+        @if (error) {
+          <div class="error-alert">
+            <span class="error-icon">⚠️</span>
+            <span>{{ error }}</span>
+          </div>
         }
-      </button>
-    </form>
 
-    <div class="login-footer">
-      <span>¿No tienes cuenta?</span>
-      <a routerLink="/register" class="register-link">Registrar Taller</a>
+        <div class="form-group">
+          <label for="email">Correo Electrónico</label>
+          <div class="input-with-icon">
+            <span class="input-icon">✉️</span>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              class="form-input"
+              placeholder="taller@ejemplo.com"
+              [class.invalid]="form.get('email')?.touched && form.get('email')?.invalid"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🔑</span>
+            <input
+              id="password"
+              type="password"
+              formControlName="password"
+              class="form-input"
+              placeholder="••••••••"
+              [class.invalid]="form.get('password')?.touched && form.get('password')?.invalid"
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg login-btn" [disabled]="loading || form.invalid">
+          @if (loading) {
+            <span class="spinner"></span>
+            <span>Autenticando...</span>
+          } @else {
+            <span>Ingresar al Panel</span>
+            <span class="arrow-icon">→</span>
+          }
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <span>¿Tu taller aún no está en la red?</span>
+        <a routerLink="/register" class="register-link">Regístrate aquí</a>
+      </div>
+      
+      <div class="demo-credentials">
+        <small><strong>Demo:</strong> elrapido@example.com / taller123</small>
+      </div>
     </div>
   </div>
 </div>
