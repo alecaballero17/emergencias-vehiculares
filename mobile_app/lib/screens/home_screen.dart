@@ -8,6 +8,7 @@ import 'login_screen.dart';
 import 'report_incident_screen.dart';
 import 'incident_detail_screen.dart';
 import 'incident_history_screen.dart';
+import 'profile_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -61,6 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: AppTheme.primaryNeon),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history, color: AppTheme.accentNeon),
             onPressed: () {

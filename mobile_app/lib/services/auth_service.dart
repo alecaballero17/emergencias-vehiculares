@@ -18,12 +18,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final authData = AuthResponse.fromJson(response.data);
-        
-        // Guardar token y rol localmente
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', authData.accessToken);
-        await prefs.setString('role', authData.role);
-        
+        await _saveAuth(authData);
         return authData;
       }
       return null;
@@ -31,6 +26,60 @@ class AuthService {
       print('Error en login: $e');
       return null;
     }
+  }
+
+  Future<AuthResponse?> registerUser({
+    required String email,
+    required String password,
+    required String fullName,
+    String? phone,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.register,
+        data: {
+          'email': email,
+          'password': password,
+          'full_name': fullName,
+          'phone': phone,
+        },
+      );
+
+      if (response.statusCode == 201) {
+        // Registro exitoso -> Ahora hacemos login automático
+        return await login(email, password);
+      }
+      return null;
+    } catch (e) {
+      print('Error en registro: $e');
+      return null;
+    }
+  }
+
+  Future<User?> getProfile() async {
+    try {
+      final token = await getToken();
+      if (token == null) return null;
+
+      final response = await _dio.get(
+        ApiConstants.profile,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        return User.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      print('Error obteniendo perfil: $e');
+      return null;
+    }
+  }
+
+  Future<void> _saveAuth(AuthResponse authData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', authData.accessToken);
+    await prefs.setString('role', authData.role);
   }
 
   Future<void> logout() async {

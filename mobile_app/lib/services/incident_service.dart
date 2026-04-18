@@ -32,6 +32,14 @@ class IncidentService {
           filename: 'emergency_audio.m4a',
         );
       }
+
+      if (imagePaths != null && imagePaths.isNotEmpty) {
+        List<MultipartFile> files = [];
+        for (var path in imagePaths) {
+          files.add(await MultipartFile.fromFile(path));
+        }
+        formDataMap['images'] = files;
+      }
       
       final formData = FormData.fromMap(formDataMap);
 
@@ -81,6 +89,23 @@ class IncidentService {
     } catch (e) {
       print('Error obteniendo historial: $e');
       return [];
+    }
+  }
+
+  Future<bool> cancelIncident(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.put(
+        '${ApiConstants.incidents}/$id/cancel',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error cancelando incidente: $e');
+      return false;
     }
   }
 }

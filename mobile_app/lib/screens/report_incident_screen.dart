@@ -3,6 +3,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../core/app_theme.dart';
 import '../models/vehicle_model.dart';
 import '../services/incident_service.dart';
@@ -18,9 +19,11 @@ class ReportIncidentScreen extends StatefulWidget {
 class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   final _incidentService = IncidentService();
   final _audioRecorder = AudioRecorder();
+  final _imagePicker = ImagePicker();
   
   bool _isRecording = false;
   String? _audioPath;
+  List<XFile> _selectedImages = [];
   bool _isSending = false;
   
   // -- Lógica de Audio --
@@ -45,6 +48,22 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     }
   }
 
+  // -- Lógica de Imágenes --
+  Future<void> _pickImages() async {
+    final List<XFile> images = await _imagePicker.pickMultiImage();
+    if (images.isNotEmpty) {
+      setState(() {
+        _selectedImages.addAll(images);
+      });
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
   // -- Enviar Emergencia --
   Future<void> _submitEmergency() async {
     setState(() => _isSending = true);
@@ -61,6 +80,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         longitude: position.longitude,
         vehicleId: widget.selectedVehicle.id,
         audioPath: _audioPath,
+        imagePaths: _selectedImages.map((e) => e.path).toList(),
       );
 
       if (success && mounted) {
@@ -169,6 +189,73 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 ],
               ),
             ),
+            
+            const SizedBox(height: 30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Evidencia de Fotos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                TextButton.icon(
+                  onPressed: _pickImages,
+                  icon: const Icon(Icons.add_a_photo, size: 18),
+                  label: const Text('Agregar'),
+                ),
+              ],
+            ),
+            const Text('Captura fotos del daño o lugar', style: TextStyle(color: AppTheme.textSecondary)),
+            const SizedBox(height: 10),
+            
+            if (_selectedImages.isEmpty)
+              Container(
+                height: 100,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Center(child: Text('Sin fotos seleccionadas', style: TextStyle(color: Colors.white24))),
+              )
+            else
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 10),
+                          width: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: const DecorationImage(
+                              image: AssetImage('assets/placeholder.png'), // Placeholder para Web, en móvil usaremos FileImage
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          // Nota: En una app móvil real usaríamos Image.file(File(_selectedImages[index].path))
+                          // Pero para la demo en Web, mostraremos un icono si el path no es accesible directamente
+                          child: const Icon(Icons.image, color: Colors.white24),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 10,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                              child: const Icon(Icons.close, size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             
             const Spacer(),
             

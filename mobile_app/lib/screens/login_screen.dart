@@ -3,6 +3,7 @@ import 'package:animate_do/animate_do.dart';
 import '../services/auth_service.dart';
 import '../core/app_theme.dart';
 import 'home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -154,7 +155,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     delay: const Duration(seconds: 1),
                     child: Center(
                       child: TextButton(
-                        onPressed: () {}, 
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          );
+                        }, 
                         child: const Text('¿No tienes cuenta? Regístrate aquí'),
                       ),
                     ),

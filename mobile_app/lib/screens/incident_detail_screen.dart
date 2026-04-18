@@ -32,6 +32,16 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     }
   }
 
+  Future<void> _cancelIncident() async {
+    final success = await _incidentService.cancelIncident(widget.incidentId);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Emergencia cancelada.')),
+      );
+      _loadDetail();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -107,7 +117,25 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
             
             const SizedBox(height: 40),
             
-            // Botón Regresar
+            // Botones de Acción
+            const SizedBox(height: 10),
+            if (status == 'pending' || status == 'assigned')
+              FadeInUp(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _cancelIncident,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.errorRed.withOpacity(0.1),
+                      side: const BorderSide(color: AppTheme.errorRed),
+                    ),
+                    child: const Text('CANCELAR EMERGENCIA', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+            
+            const SizedBox(height: 15),
+            
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
