@@ -9,6 +9,7 @@ import 'report_incident_screen.dart';
 import 'incident_detail_screen.dart';
 import 'incident_history_screen.dart';
 import 'profile_screen.dart';
+import 'vehicle_form_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -234,59 +235,94 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
     
                   // Lista de Vehículos
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mis Vehículos',
-                          style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Mis Vehículos',
+                              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              onPressed: () async {
+                                final refresh = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const VehicleFormScreen()),
+                                );
+                                if (refresh == true) _loadData();
+                              },
+                              icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryNeon),
+                              tooltip: 'Añadir Vehículo',
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 15),
-                        SizedBox(
-                          height: 100,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _vehicles.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 15),
-                            itemBuilder: (context, index) {
-                              final v = _vehicles[index];
-                              final isSelected = _selectedVehicle?.id == v.id;
-                              return FadeInRight(
-                                delay: Duration(milliseconds: 100 * index),
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _selectedVehicle = v),
-                                  child: Container(
-                                    width: 160,
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.cardBg,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: isSelected ? AppTheme.primaryNeon : Colors.white.withOpacity(0.05),
-                                        width: isSelected ? 2 : 1,
+                        const SizedBox(height: 10),
+                        if (_vehicles.isEmpty)
+                          Container(
+                            height: 100,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppTheme.cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.05)),
+                            ),
+                            child: const Center(
+                              child: Text('No tienes vehículos registrados 🚗', style: TextStyle(color: AppTheme.textSecondary)),
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            height: 100,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _vehicles.length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 15),
+                              itemBuilder: (context, index) {
+                                final v = _vehicles[index];
+                                final isSelected = _selectedVehicle?.id == v.id;
+                                return FadeInRight(
+                                  delay: Duration(milliseconds: 100 * index),
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _selectedVehicle = v),
+                                    onLongPress: () async {
+                                      final refresh = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => VehicleFormScreen(vehicle: v)),
+                                      );
+                                      if (refresh == true) _loadData();
+                                    },
+                                    child: Container(
+                                      width: 160,
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.cardBg,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: isSelected ? AppTheme.primaryNeon : Colors.white.withOpacity(0.05),
+                                          width: isSelected ? 2 : 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Icon(Icons.directions_car, size: 20, color: isSelected ? AppTheme.primaryNeon : AppTheme.accentNeon),
+                                              if (isSelected) const Icon(Icons.check_circle, size: 14, color: AppTheme.primaryNeon),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Text(v.brand, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                          Text(v.plateNumber, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                                        ],
                                       ),
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.directions_car, size: 20, color: isSelected ? AppTheme.primaryNeon : AppTheme.accentNeon),
-                                        const SizedBox(height: 5),
-                                        Text(v.brand, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                        Text(v.plateNumber, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                                      ],
-                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 40),
                 ],
               ),

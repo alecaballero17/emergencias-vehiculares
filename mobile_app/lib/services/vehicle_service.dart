@@ -30,4 +30,57 @@ class VehicleService {
       return [];
     }
   }
+
+  Future<bool> registerVehicle(Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.post(
+        ApiConstants.vehicles,
+        data: data,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      print('Error registrando vehículo: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateVehicle(int id, Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.put(
+        '${ApiConstants.vehicles}/$id',
+        data: data,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error actualizando vehículo: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteVehicle(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.delete(
+        '${ApiConstants.vehicles}/$id',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.statusCode == 204;
+    } catch (e) {
+      print('Error eliminando vehículo: $e');
+      return false;
+    }
+  }
 }
