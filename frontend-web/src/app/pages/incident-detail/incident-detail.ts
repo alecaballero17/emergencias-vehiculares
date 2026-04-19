@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -51,20 +51,32 @@ export class IncidentDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private ws: WorkshopService
+    private ws: WorkshopService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    setTimeout(() => { this.loading = false; }, 3000);
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loadIncident(id);
-    this.ws.getTechnicians().subscribe(t => this.technicians = t.filter(x => x.is_available));
+    this.ws.getTechnicians().subscribe(t => {
+      this.technicians = t.filter(x => x.is_available);
+      this.cdr.detectChanges();
+    });
   }
 
   loadIncident(id: number): void {
+    this.loading = true;
     this.ws.getIncidentDetail(id).subscribe({
-      next: (data) => { this.incident = data; this.loading = false; },
-      error: (err) => { this.error = 'No se pudo cargar el incidente'; this.loading = false; }
+      next: (data) => { 
+        this.incident = data; 
+        this.loading = false; 
+        this.cdr.detectChanges();
+      },
+      error: (err) => { 
+        this.error = 'No se pudo cargar el incidente'; 
+        this.loading = false; 
+        this.cdr.detectChanges();
+      }
     });
   }
 
