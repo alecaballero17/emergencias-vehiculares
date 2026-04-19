@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:animate_do/animate_do.dart';
@@ -155,9 +156,10 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     setState(() => _isSending = true);
 
     try {
-      // 1. Obtener Ubicación
+      // 1. Obtener Ubicación con Timeout de 10s
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
 
       // 2. Enviar al Backend
@@ -166,16 +168,26 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         longitude: position.longitude,
         vehicleId: widget.selectedVehicle.id,
         audioPath: _audioPath,
-        imagePaths: _selectedImages.map((e) => e.path).toList(),
+        imageFiles: _selectedImages, // Enviamos el objeto XFile completo
       );
 
       if (success && mounted) {
         _showSuccess();
+      } else {
+        throw Exception('Servidor no disponible');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: Permisos de ubicación necesarios')),
-      );
+      String errorMsg = 'Error al enviar reporte';
+      if (e is TimeoutException) errorMsg = 'No se pudo obtener el GPS (Tiempo agotado)';
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.errorRed,
+            content: Text(errorMsg, style: const TextStyle(color: Colors.white)),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -375,14 +387,14 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                           width: 100,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            image: const DecorationImage(
-                              image: AssetImage('assets/placeholder.png'), // Placeholder para Web, en móvil usaremos FileImage
+                            image: DecorationImage(
+                              image: kIsWeb 
+                                ? NetworkImage(_selectedImages[index].path) as ImageProvider
+                                : FileImage(io.File(_selectedImages[index].path)) as ImageProvider,
                               fit: BoxFit.cover,
                             ),
                           ),
-                          // Nota: En una app móvil real usaríamos Image.file(File(_selectedImages[index].path))
-                          // Pero para la demo en Web, mostraremos un icono si el path no es accesible directamente
-                          child: const Icon(Icons.image, color: Colors.white24),
+                          child: Container(), // Eliminamos el icono si la imagen carga
                         ),
                         Positioned(
                           top: 0,

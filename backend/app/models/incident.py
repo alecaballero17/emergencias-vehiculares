@@ -28,7 +28,7 @@ class Incident(Base):
     priority = Column(SAEnum(IncidentPriority), default=IncidentPriority.MEDIUM)
     status = Column(SAEnum(IncidentStatus), default=IncidentStatus.PENDING, index=True)
     ai_summary = Column(Text, nullable=True)
-    ai_classification = Column(String(100), nullable=True)
+    ai_classification = Column(Text, nullable=True)
     ai_confidence = Column(Float, nullable=True)
 
     # Servicio

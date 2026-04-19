@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_constants.dart';
 
@@ -11,7 +13,7 @@ class IncidentService {
     int? vehicleId,
     String? description,
     String? audioPath,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -27,33 +29,69 @@ class IncidentService {
       };
 
       if (audioPath != null) {
-        formDataMap['audio'] = await MultipartFile.fromFile(
-          audioPath,
-          filename: 'emergency_audio.m4a',
-        );
+        if (kIsWeb) {
+          try {
+            debugPrint('Intentando obtener bytes del audio blob: $audioPath');
+            // Usamos un Dio limpio para el blob para evitar conflictos de headers base
+            final blobResponse = await Dio().get(audioPath, options: Options(responseType: ResponseType.bytes));
+            debugPrint('Bytes de audio obtenidos: ${blobResponse.data?.length}');
+            
+            formDataMap['audio'] = MultipartFile.fromBytes(
+              blobResponse.data,
+              filename: 'emergency_audio.webm',
+            );
+          } catch (e) {
+            debugPrint('ERROR fatal obteniendo audio: $e');
+            // Continuamos sin audio si falla para ver si el resto del reporte pasa
+          }
+        } else {
+          formDataMap['audio'] = await MultipartFile.fromFile(
+            audioPath,
+            filename: 'emergency_audio.m4a',
+          );
+        }
       }
 
-      if (imagePaths != null && imagePaths.isNotEmpty) {
+      if (imageFiles != null && imageFiles.isNotEmpty) {
+        debugPrint('Procesando ${imageFiles.length} imágenes');
         List<MultipartFile> files = [];
-        for (var path in imagePaths) {
-          files.add(await MultipartFile.fromFile(path));
+        for (var xFile in imageFiles) {
+          if (kIsWeb) {
+            final bytes = await xFile.readAsBytes();
+            files.add(MultipartFile.fromBytes(bytes, filename: xFile.name));
+          } else {
+            files.add(await MultipartFile.fromFile(xFile.path));
+          }
         }
         formDataMap['images'] = files;
       }
       
       final formData = FormData.fromMap(formDataMap);
+      debugPrint('Enviando POST a ${ApiConstants.incidents}...');
 
       final response = await _dio.post(
         ApiConstants.incidents,
         data: formData,
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+          // Aumentamos el timeout para el procesamiento de IA
+          sendTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
         ),
       );
 
+      debugPrint('Respuesta del servidor: ${response.statusCode}');
       return response.statusCode == 201;
     } catch (e) {
-      print('Error reportando incidente: $e');
+      if (e is DioException) {
+        debugPrint('ERROR DE DIO: ${e.type} - ${e.message}');
+        debugPrint('Datos de error: ${e.response?.data}');
+      } else {
+        debugPrint('Error desconocido reportando incidente: $e');
+      }
       return false;
     }
   }
