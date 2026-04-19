@@ -144,11 +144,21 @@ def get_workshop_incident_detail(
             joinedload(Incident.status_history),
             joinedload(Incident.payment),
         )
-        .filter(Incident.id == incident_id, Incident.workshop_id == current_workshop.id)
+        .filter(Incident.id == incident_id)
         .first()
     )
+    
+    # Optimización para defensa: Permitir ver el detalle si está PENDING (disponible)
+    # o si está asignado a este taller. 
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado")
+        
+    # Permitir ver si está disponible para todos (PENDING) o si es suyo
+    can_view = (incident.status == IncidentStatus.PENDING) or (incident.workshop_id == current_workshop.id)
+    
+    if not can_view:
+         raise HTTPException(status_code=403, detail="Este incidente ya está siendo atendido por otro taller")
+         
     return incident
 
 

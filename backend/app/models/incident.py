@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from datetime import datetime
 from app.database import Base
 from app.models.enums import IncidentType, IncidentPriority, IncidentStatus
 
@@ -17,7 +18,7 @@ class Incident(Base):
     # Ubicación
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    address = Column(String(500), nullable=True)
+    address = Column(Text, nullable=True)
 
     # Descripción
     description = Column(Text, nullable=True)
@@ -36,8 +37,8 @@ class Incident(Base):
     final_cost = Column(Float, nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     assigned_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
 

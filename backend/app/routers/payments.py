@@ -1,5 +1,5 @@
-"""Router de pagos: procesamiento de pagos y comisiones."""
 from datetime import datetime, timezone
+import pytz
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -44,7 +44,7 @@ def create_payment(
         commission_percent=settings.platform_commission_percent,
         payment_method=data.payment_method,
         payment_status=PaymentStatus.COMPLETED,
-        paid_at=datetime.now(timezone.utc),
+        paid_at=datetime.now(pytz.timezone('America/La_Paz')),
     )
     db.add(payment)
     db.commit()

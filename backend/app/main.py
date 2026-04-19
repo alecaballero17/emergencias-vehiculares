@@ -28,7 +28,7 @@ app = FastAPI(
 # CORS para Angular y Flutter
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex="http://localhost:.*",  # Permite cualquier puerto de localhost (Flutter Web/Angular)
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):.*",  # Permite cualquier puerto de localhost o 127.0.0.1
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

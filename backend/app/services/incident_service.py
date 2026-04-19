@@ -4,6 +4,7 @@ Orquesta el flujo completo: creación, procesamiento IA, asignación y actualiza
 """
 import os
 import uuid
+import pytz
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
@@ -137,7 +138,7 @@ async def create_incident(
         incident.technician_id = assignment.technician_id
         incident.estimated_arrival_minutes = assignment.estimated_arrival_minutes
         incident.status = IncidentStatus.ASSIGNED
-        incident.assigned_at = datetime.now(timezone.utc)
+        incident.assigned_at = datetime.now(pytz.timezone('America/La_Paz'))
 
         _add_history(
             db, incident.id, IncidentStatus.ASSIGNED.value,
@@ -161,7 +162,7 @@ async def update_incident_status(
     incident.status = new_status
 
     if new_status == IncidentStatus.COMPLETED:
-        incident.completed_at = datetime.now(timezone.utc)
+        incident.completed_at = datetime.now(pytz.timezone('America/La_Paz'))
 
     _add_history(db, incident.id, new_status.value, notes, updated_by)
 

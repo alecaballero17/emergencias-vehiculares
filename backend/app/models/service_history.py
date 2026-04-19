@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from datetime import datetime
 from app.database import Base
 
 
@@ -12,7 +13,7 @@ class ServiceHistory(Base):
     status = Column(String(50), nullable=False)
     notes = Column(Text, nullable=True)
     created_by = Column(String(100), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime, default=datetime.now)
 
     # Relaciones
     incident = relationship("Incident", back_populates="status_history")
