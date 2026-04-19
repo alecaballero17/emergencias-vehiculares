@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:animate_do/animate_do.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:record/record.dart';
@@ -85,25 +86,51 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   
   // -- Lógica de Audio --
   Future<void> _toggleRecording() async {
-    if (_isRecording) {
-      _stopTimer();
-      final path = await _audioRecorder.stop();
-      setState(() {
-        _isRecording = false;
-        _audioPath = path;
-      });
-    } else {
-      if (await _audioRecorder.hasPermission()) {
-        final dir = await getTemporaryDirectory();
-        final path = '${dir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-        
-        await _audioRecorder.start(const RecordConfig(), path: path);
-        _startTimer();
+    try {
+      if (_isRecording) {
+        _stopTimer();
+        final path = await _audioRecorder.stop();
         setState(() {
-          _isRecording = true;
-          _audioPath = null;
+          _isRecording = false;
+          _audioPath = path;
         });
+        debugPrint('Grabación detenida. Path: $path');
+      } else {
+        if (await _audioRecorder.hasPermission()) {
+          String? path;
+          
+          if (!kIsWeb) {
+            final dir = await getTemporaryDirectory();
+            path = '${dir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          }
+          
+          // Usamos 'opus' para Web ya que es el estándar más compatible en navegadores
+          // En móvil, dejamos que el sistema elija o usamos uno común
+          const config = RecordConfig(
+            encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          );
+          
+          await _audioRecorder.start(config, path: path ?? '');
+          
+          _startTimer();
+          setState(() {
+            _isRecording = true;
+            _audioPath = null;
+          });
+          debugPrint('Grabación iniciada...');
+        } else {
+          debugPrint('No hay permisos de micrófono');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Por favor, concede permiso al micrófono en el navegador')),
+            );
+          }
+        }
       }
+    } catch (e) {
+      debugPrint('Error crítico en grabación: $e');
     }
   }
 
@@ -214,10 +241,11 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
             const Text('Describe el problema para que la IA lo analice', style: TextStyle(color: AppTheme.textSecondary)),
             const SizedBox(height: 20),
             
-            // Botón de Grabación
+            // Botón de Grabación y Preview
             Center(
               child: Column(
                 children: [
+                  // CASO 1: No hay audio grabado o estamos grabando ahora
                   if (_audioPath == null || _isRecording)
                     Stack(
                       alignment: Alignment.center,
@@ -236,13 +264,17 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                           ),
                         GestureDetector(
                           onTap: _toggleRecording,
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
                             width: 80,
                             height: 80,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: _isRecording ? AppTheme.errorRed : AppTheme.cardBg,
-                              border: Border.all(color: AppTheme.errorRed, width: 2),
+                              border: Border.all(
+                                color: _isRecording ? Colors.white : AppTheme.errorRed,
+                                width: 2
+                              ),
                             ),
                             child: Icon(
                               _isRecording ? Icons.stop : Icons.mic, 
@@ -254,27 +286,34 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                       ],
                     )
                   else
-                    // Player Preview
+                    // CASO 2: Audio ya grabado (Mostrar Player)
                     FadeIn(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: AppTheme.cardBg,
                           borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: AppTheme.primaryNeon.withOpacity(0.3)),
+                          border: Border.all(color: AppTheme.primaryNeon.withOpacity(0.5)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               onPressed: _playPauseAudio,
-                              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: AppTheme.primaryNeon),
+                              icon: Icon(
+                                _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, 
+                                color: AppTheme.primaryNeon,
+                                size: 30,
+                              ),
                             ),
-                            const Text('Audio grabado ready', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                            const SizedBox(width: 10),
+                            const Text(
+                              'Audio listo', 
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                            ),
+                            const SizedBox(width: 8),
                             IconButton(
                               onPressed: _deleteAudio,
-                              icon: const Icon(Icons.delete_outline, color: AppTheme.errorRed, size: 20),
+                              icon: const Icon(Icons.delete_forever, color: AppTheme.errorRed, size: 24),
                             ),
                           ],
                         ),
@@ -285,7 +324,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                   Text(
                     _isRecording 
                       ? 'GRABANDO... ${_formatDuration(_recordDuration)}'
-                      : (_audioPath != null ? 'Toca Play para revisar' : 'Toca para grabar reporte'),
+                      : (_audioPath != null ? 'Revisa tu reporte antes de enviar' : 'Toca el micro para grabar tu reporte'),
                     style: TextStyle(
                       color: _isRecording ? AppTheme.errorRed : AppTheme.textSecondary,
                       fontWeight: FontWeight.bold,

@@ -9,7 +9,34 @@
 
 # 🚗 Plataforma Inteligente de Atención de Emergencias Vehiculares
 
-> Sistema multiplataforma que conecta a conductores con emergencias mecánicas en carretera con talleres especializados cercanos, utilizando **inteligencia artificial** para el procesamiento multimodal de reportes y la **asignación inteligente** del taller más adecuado.
+> Sistema multiplataforma que conecta a conductores con emergencias mecánicas en carretera con talleres especializados cercanos.
+
+---
+
+## 🚀 Preparación Rápida para la Defensa
+
+Para iniciar la demostración completa, abre **tres terminales** y ejecuta los siguientes comandos:
+
+### 1. Backend (Cerebro IA)
+```powershell
+cd backend
+.\venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+📍 Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 2. Panel Web (Administración de Talleres)
+```powershell
+cd frontend-web
+npm start
+```
+📍 Web: [http://localhost:4200](http://localhost:4200)
+
+### 3. App Móvil (Reportero SOS)
+```powershell
+cd mobile_app
+flutter run -d chrome
+```
 
 ---
 
