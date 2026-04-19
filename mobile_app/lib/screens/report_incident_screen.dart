@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../core/app_theme.dart';
 import '../models/vehicle_model.dart';
 import '../services/incident_service.dart';
@@ -19,6 +21,7 @@ class ReportIncidentScreen extends StatefulWidget {
 class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   final _incidentService = IncidentService();
   final _audioRecorder = AudioRecorder();
+  final _audioPlayer = AudioPlayer();
   final _imagePicker = ImagePicker();
   
   bool _isRecording = false;
@@ -26,9 +29,64 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   List<XFile> _selectedImages = [];
   bool _isSending = false;
   
+  // Timer para grabación
+  Timer? _timer;
+  int _recordDuration = 0;
+  bool _isPlaying = false;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _recordDuration = 0;
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
+      setState(() => _recordDuration++);
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = (seconds / 60).floor().toString().padLeft(2, '0');
+    final secs = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$secs';
+  }
+
+  Future<void> _playPauseAudio() async {
+    if (_audioPath == null) return;
+
+    if (_isPlaying) {
+      await _audioPlayer.pause();
+      setState(() => _isPlaying = false);
+    } else {
+      await _audioPlayer.play(DeviceFileSource(_audioPath!));
+      setState(() => _isPlaying = true);
+      
+      _audioPlayer.onPlayerComplete.listen((event) {
+        if (mounted) setState(() => _isPlaying = false);
+      });
+    }
+  }
+
+  void _deleteAudio() {
+    setState(() {
+      _audioPath = null;
+      _isPlaying = false;
+    });
+    _audioPlayer.stop();
+  }
+  
   // -- Lógica de Audio --
   Future<void> _toggleRecording() async {
     if (_isRecording) {
+      _stopTimer();
       final path = await _audioRecorder.stop();
       setState(() {
         _isRecording = false;
@@ -37,9 +95,10 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     } else {
       if (await _audioRecorder.hasPermission()) {
         final dir = await getTemporaryDirectory();
-        final path = '${dir.path}/temp_audio.m4a';
+        final path = '${dir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
         
         await _audioRecorder.start(const RecordConfig(), path: path);
+        _startTimer();
         setState(() {
           _isRecording = true;
           _audioPath = null;
@@ -159,31 +218,78 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
             Center(
               child: Column(
                 children: [
-                  GestureDetector(
-                    onTap: _toggleRecording,
-                    child: FadeIn(
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isRecording ? AppTheme.errorRed : AppTheme.cardBg,
-                          border: Border.all(color: AppTheme.errorRed, width: 2),
+                  if (_audioPath == null || _isRecording)
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (_isRecording)
+                          Pulse(
+                            infinite: true,
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.errorRed.withOpacity(0.2),
+                              ),
+                            ),
+                          ),
+                        GestureDetector(
+                          onTap: _toggleRecording,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _isRecording ? AppTheme.errorRed : AppTheme.cardBg,
+                              border: Border.all(color: AppTheme.errorRed, width: 2),
+                            ),
+                            child: Icon(
+                              _isRecording ? Icons.stop : Icons.mic, 
+                              color: _isRecording ? Colors.white : AppTheme.errorRed,
+                              size: 32,
+                            ),
+                          ),
                         ),
-                        child: Icon(
-                          _isRecording ? Icons.stop : Icons.mic, 
-                          color: _isRecording ? Colors.white : AppTheme.errorRed,
-                          size: 32,
+                      ],
+                    )
+                  else
+                    // Player Preview
+                    FadeIn(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBg,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: AppTheme.primaryNeon.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              onPressed: _playPauseAudio,
+                              icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, color: AppTheme.primaryNeon),
+                            ),
+                            const Text('Audio grabado ready', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                            const SizedBox(width: 10),
+                            IconButton(
+                              onPressed: _deleteAudio,
+                              icon: const Icon(Icons.delete_outline, color: AppTheme.errorRed, size: 20),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
+                  
+                  const SizedBox(height: 12),
                   Text(
-                    _isRecording ? 'GRABANDO...' : (_audioPath != null ? 'Audio grabado ✅' : 'Toca para grabar'),
+                    _isRecording 
+                      ? 'GRABANDO... ${_formatDuration(_recordDuration)}'
+                      : (_audioPath != null ? 'Toca Play para revisar' : 'Toca para grabar reporte'),
                     style: TextStyle(
                       color: _isRecording ? AppTheme.errorRed : AppTheme.textSecondary,
-                      fontWeight: FontWeight.bold
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
                     ),
                   )
                 ],
