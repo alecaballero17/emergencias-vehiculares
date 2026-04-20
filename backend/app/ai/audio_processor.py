@@ -53,11 +53,18 @@ async def extract_audio_keywords(transcription: str) -> dict:
 
 
 def _mock_transcription(file_path: str) -> str:
-    """Transcripción simulada cuando no hay API key configurada."""
-    return (
-        "Mi auto no enciende, creo que es un problema con la batería. "
-        "Estoy en un estacionamiento y necesito ayuda urgente."
-    )
+    """Transcripción simulada que rota según el segundo actual (para demo)."""
+    import datetime
+    sec = datetime.datetime.now().second
+    
+    if sec < 15:
+        return "Hola, mi auto no arranca. Creo que es la batería, las luces están muy tenues."
+    elif sec < 30:
+        return "Tengo humo saliendo del motor y la temperatura subió al máximo. Necesito ayuda."
+    elif sec < 45:
+        return "Acabo de tener un choque leve en la esquina, el parachoques se soltó y no puedo mover el auto."
+    else:
+        return "Se me pinchó una llanta en plena avenida y no tengo la llave de cruz para cambiarla."
 
 
 def _mock_keyword_extraction(transcription: str) -> dict:

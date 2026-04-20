@@ -8,8 +8,13 @@ from app.models.technician import Technician
 from app.models.incident import Incident
 from app.models.enums import IncidentStatus
 from app.schemas.workshop import WorkshopResponse, WorkshopUpdate, TechnicianCreate, TechnicianUpdate, TechnicianResponse
-from app.schemas.incident import IncidentResponse, IncidentDetail, IncidentUpdate
-from app.services.incident_service import update_incident_status
+from app.schemas.incident import (
+    IncidentResponse, IncidentDetail, IncidentUpdate,
+    IncidentAccept, IncidentReject, IncidentComplete
+)
+from app.services.incident_service import update_incident_status, _add_history
+from app.models.payment import Payment
+from app.models.enums import PaymentStatus
 from app.services.notification_service import notify_user
 from app.utils.security import get_current_workshop
 
@@ -165,17 +170,27 @@ def get_workshop_incident_detail(
 @router.put("/incidents/{incident_id}/accept", response_model=IncidentResponse)
 async def accept_incident(
     incident_id: int,
+    data: IncidentAccept,
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
     """Aceptar una solicitud de incidente (cambia estado a en_proceso)."""
-    incident = db.query(Incident).filter(
-        Incident.id == incident_id,
-        Incident.workshop_id == current_workshop.id,
-        Incident.status == IncidentStatus.ASSIGNED,
-    ).first()
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    
     if not incident:
-        raise HTTPException(status_code=404, detail="Incidente no encontrado o no asignado a este taller")
+        raise HTTPException(status_code=404, detail="Incidente no encontrado")
+
+    # Permitir aceptar si está PENDING (disponible) o si está ASSIGNED a este taller
+    is_valid_pending = (incident.status == IncidentStatus.PENDING and incident.workshop_id is None)
+    is_valid_assigned = (incident.status == IncidentStatus.ASSIGNED and incident.workshop_id == current_workshop.id)
+
+    if not (is_valid_pending or is_valid_assigned):
+        raise HTTPException(status_code=400, detail="Este incidente no puede ser aceptado por este taller")
+
+    # Guardar asignación manual
+    incident.workshop_id = current_workshop.id
+    if data.technician_id:
+        incident.technician_id = data.technician_id
 
     incident = await update_incident_status(
         db, incident, IncidentStatus.IN_PROGRESS,
@@ -196,6 +211,7 @@ async def accept_incident(
 @router.put("/incidents/{incident_id}/reject", response_model=IncidentResponse)
 async def reject_incident(
     incident_id: int,
+    data: IncidentReject,
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
@@ -207,14 +223,15 @@ async def reject_incident(
     ).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado")
+    
+    rejection_notes = data.reason if data.reason else "Sin motivo especificado"
 
     incident.workshop_id = None
     incident.technician_id = None
     incident.status = IncidentStatus.PENDING
     incident.assigned_at = None
 
-    from app.services.incident_service import _add_history
-    _add_history(db, incident.id, "pending", f"Rechazado por taller {current_workshop.name}", f"taller_{current_workshop.id}")
+    _add_history(db, incident.id, "pending", f"Rechazado por taller {current_workshop.name}: {rejection_notes}", f"taller_{current_workshop.id}")
     db.commit()
     db.refresh(incident)
 
@@ -231,7 +248,7 @@ async def reject_incident(
 @router.put("/incidents/{incident_id}/complete", response_model=IncidentResponse)
 async def complete_incident(
     incident_id: int,
-    final_cost: float | None = None,
+    data: IncidentComplete,
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
@@ -244,12 +261,26 @@ async def complete_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado o no en proceso")
 
-    if final_cost is not None:
-        incident.final_cost = final_cost
+    # Registrar costo final
+    incident.final_cost = data.final_cost
+
+    # Calcular comisión del 10% (Requisito examen)
+    commission_percent = 10.0
+    commission_amount = data.final_cost * (commission_percent / 100.0)
+
+    # Crear registro de pago
+    payment = Payment(
+        incident_id=incident.id,
+        amount=data.final_cost,
+        commission_amount=commission_amount,
+        commission_percent=commission_percent,
+        payment_status=PaymentStatus.PENDING,
+    )
+    db.add(payment)
 
     incident = await update_incident_status(
         db, incident, IncidentStatus.COMPLETED,
-        f"Servicio completado por taller {current_workshop.name}",
+        data.notes if data.notes else f"Servicio completado por taller {current_workshop.name}",
         f"taller_{current_workshop.id}",
     )
 

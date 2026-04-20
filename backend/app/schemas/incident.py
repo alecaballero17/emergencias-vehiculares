@@ -129,3 +129,15 @@ class AssignmentResult(BaseModel):
     technician_id: Optional[int]
     estimated_arrival_minutes: int
     candidates: list[WorkshopCandidate]
+
+
+# --- Workshop Actions ---
+class IncidentAccept(BaseModel):
+    technician_id: Optional[int] = None
+
+class IncidentReject(BaseModel):
+    reason: Optional[str] = None
+
+class IncidentComplete(BaseModel):
+    final_cost: float
+    notes: Optional[str] = None

@@ -39,7 +39,7 @@
         </div>
       </div>
       <div class="header-actions">
-        @if (incident.status === 'assigned') {
+        @if (incident.status === 'pending' || incident.status === 'assigned') {
           <button class="btn btn-success" (click)="showAcceptModal = true">Aceptar Servicio</button>
           <button class="btn btn-ghost" (click)="showRejectModal = true" style="color: var(--danger-500)">Rechazar</button>
         }

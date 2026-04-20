@@ -67,10 +67,31 @@ async def classify_damage_from_images(image_analyses: list[dict]) -> dict:
 
 
 def _mock_image_analysis(file_path: str) -> dict:
-    """Análisis simulado de imagen cuando no hay API key."""
-    return {
-        "damage_type": "tire",
-        "damage_description": "Se observa una llanta desinflada en el lado derecho del vehículo",
-        "severity": "medium",
-        "confidence": 0.78,
-    }
+    """Análisis simulado de imagen que rota según el segundo actual (para demo)."""
+    import datetime
+    sec = datetime.datetime.now().second
+    
+    if sec < 15:
+        return {
+            "damage_type": "battery",
+            "damage_description": "Se observa corrosión en los bornes de la batería y cables desgastados.",
+            "severity": "medium", "confidence": 0.85
+        }
+    elif sec < 30:
+        return {
+            "damage_type": "overheating",
+            "damage_description": "Se observa vapor saliendo del capó y posibles fugas de refrigerante.",
+            "severity": "high", "confidence": 0.90
+        }
+    elif sec < 45:
+        return {
+            "damage_type": "crash",
+            "damage_description": "Daño estructural visible en el parachoques delantero y faro derecho roto.",
+            "severity": "high", "confidence": 0.95
+        }
+    else:
+        return {
+            "damage_type": "tire",
+            "damage_description": "Se observa una llanta totalmente desinflada con daño en el flanco.",
+            "severity": "medium", "confidence": 0.88
+        }
