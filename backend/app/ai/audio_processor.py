@@ -3,53 +3,99 @@ Módulo de procesamiento de audio.
 Convierte audio a texto y extrae información relevante usando OpenAI Whisper API.
 """
 import os
-from openai import OpenAI
+import google.generativeai as genai
+import json
 from app.config import get_settings
 
 settings = get_settings()
 
+if settings.gemini_api_key:
+    genai.configure(api_key=settings.gemini_api_key)
+
 
 async def transcribe_audio(file_path: str) -> str:
-    """Transcribe un archivo de audio a texto usando OpenAI Whisper."""
-    if not settings.openai_api_key or settings.openai_api_key.startswith("sk-your"):
-        return _mock_transcription(file_path)
+    """Transcribe un archivo de audio a texto usando Gemini o OpenAI."""
+    # 1. Intentar con Gemini (Gratis y Multimodal)
+    if settings.gemini_api_key:
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            with open(file_path, "rb") as f:
+                audio_data = f.read()
+            
+            # Determinar mime_type
+            mime_type = "audio/mpeg" if file_path.endswith(".mp3") else "audio/wav"
+            
+            response = model.generate_content([
+                {"mime_type": mime_type, "data": audio_data},
+                "Transcribe únicamente este audio a texto en español. "
+                "No añadas comentarios, solo el texto transcrito."
+            ])
+            return response.text.strip()
+        except Exception as e:
+            print(f"Error en Gemini Transcription: {e}")
 
-    client = OpenAI(api_key=settings.openai_api_key)
-    with open(file_path, "rb") as audio_file:
-        transcription = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=audio_file,
-            language="es",
-        )
-    return transcription.text
+    # 2. Intentar con OpenAI (Si está configurado)
+    if settings.openai_api_key and not settings.openai_api_key.startswith("sk-your"):
+        client = OpenAI(api_key=settings.openai_api_key)
+        with open(file_path, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                language="es",
+            )
+        return transcription.text
+
+    # 3. Fallback a Mock
+    return _mock_transcription(file_path)
 
 
 async def extract_audio_keywords(transcription: str) -> dict:
     """Extrae palabras clave del audio transcrito para clasificación."""
-    if not settings.openai_api_key or settings.openai_api_key.startswith("sk-your"):
-        return _mock_keyword_extraction(transcription)
+    # 1. Intentar con Gemini
+    if settings.gemini_api_key:
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            prompt = (
+                "Eres un experto en diagnóstico vehicular. Analiza la siguiente transcripción "
+                "de una emergencia y extrae información estructurada. "
+                "Responde ÚNICAMENTE en JSON válido con este formato: "
+                '{"keywords": ["palabra1", "palabra2"], '
+                '"probable_type": "battery|tire|crash|engine|keys_lost|keys_locked|overheating|other", '
+                '"severity": "low|medium|high|critical"}'
+                f"\n\nTranscripción: {transcription}"
+            )
+            response = model.generate_content(prompt)
+            # Limpiar posibles bloques de código markdown
+            json_text = response.text.replace("```json", "").replace("```", "").strip()
+            return json.loads(json_text)
+        except Exception as e:
+            print(f"Error en Gemini Keywords: {e}")
 
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Eres un asistente que analiza descripciones de problemas vehiculares. "
-                    "Extrae las palabras clave y clasifica el tipo de problema. "
-                    "Responde SOLO en formato JSON con los campos: "
-                    "keywords (lista de palabras clave), "
-                    "probable_type (battery|tire|crash|engine|keys_lost|keys_locked|overheating|other), "
-                    "severity (low|medium|high|critical)"
-                ),
-            },
-            {"role": "user", "content": transcription},
-        ],
-        response_format={"type": "json_object"},
-    )
-    import json
-    return json.loads(response.choices[0].message.content)
+    # 2. Intentar con OpenAI
+    if settings.openai_api_key and not settings.openai_api_key.startswith("sk-your"):
+        client = OpenAI(api_key=settings.openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un asistente que analiza descripciones de problemas vehiculares. "
+                        "Extrae las palabras clave y clasifica el tipo de problema. "
+                        "Responde SOLO en formato JSON con los campos: "
+                        "keywords (lista de palabras clave), "
+                        "probable_type (battery|tire|crash|engine|keys_lost|keys_locked|overheating|other), "
+                        "severity (low|medium|high|critical)"
+                    ),
+                },
+                {"role": "user", "content": transcription},
+            ],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(response.choices[0].message.content)
+
+    # 3. Fallback a Mock
+    return _mock_keyword_extraction(transcription)
 
 
 def _mock_transcription(file_path: str) -> str:

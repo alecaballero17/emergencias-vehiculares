@@ -2,53 +2,81 @@
 Módulo de clasificación de imágenes vehiculares.
 Usa visión artificial (OpenAI GPT-4o) para analizar fotos y clasificar el incidente.
 """
-import base64
-from openai import OpenAI
+import google.generativeai as genai
+import json
+from PIL import Image
 from app.config import get_settings
 from app.models.enums import IncidentType
 
 settings = get_settings()
 
+if settings.gemini_api_key:
+    genai.configure(api_key=settings.gemini_api_key)
+
 
 async def analyze_image(file_path: str) -> dict:
-    """Analiza una imagen del vehículo y clasifica el tipo de daño."""
-    if not settings.openai_api_key or settings.openai_api_key.startswith("sk-your"):
-        return _mock_image_analysis(file_path)
+    """Analiza una imagen del vehículo y clasifica el tipo de daño usando Gemini o OpenAI."""
+    # 1. Intentar con Gemini
+    if settings.gemini_api_key:
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            img = Image.open(file_path)
+            
+            prompt = (
+                "Actúa como un experto en peritaje de vehículos. Analiza la imagen adjunta "
+                "e identifica el tipo de daño o problema visible. "
+                "Responde ÚNICAMENTE en JSON válido con este formato: "
+                '{"damage_type": "tire|engine|crash|battery|overheating|other", '
+                '"damage_description": "descripción breve del daño", '
+                '"severity": "low|medium|high|critical", "confidence": 0.0-1.0}'
+            )
+            
+            response = model.generate_content([prompt, img])
+            json_text = response.text.replace("```json", "").replace("```", "").strip()
+            return json.loads(json_text)
+        except Exception as e:
+            print(f"Error en Gemini Image Analysis: {e}")
 
-    with open(file_path, "rb") as f:
-        image_data = base64.b64encode(f.read()).decode("utf-8")
+    # 2. Intentar con OpenAI (GPT-4o)
+    if settings.openai_api_key and not settings.openai_api_key.startswith("sk-your"):
+        import base64
+        with open(file_path, "rb") as f:
+            image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    ext = file_path.rsplit(".", 1)[-1].lower()
-    mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}.get(ext, "image/jpeg")
+        ext = file_path.rsplit(".", 1)[-1].lower()
+        mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}.get(ext, "image/jpeg")
 
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Eres un experto en diagnóstico vehicular visual. "
-                    "Analiza la imagen del vehículo y responde SOLO en JSON con: "
-                    "damage_type (battery|tire|crash|engine|overheating|keys_lost|keys_locked|other), "
-                    "damage_description (descripción breve del daño visible), "
-                    "severity (low|medium|high|critical), "
-                    "confidence (0.0 a 1.0)"
-                ),
-            },
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Analiza esta imagen de un vehículo con problemas:"},
-                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{image_data}"}},
-                ],
-            },
-        ],
-        response_format={"type": "json_object"},
-        max_tokens=500,
-    )
-    import json
-    return json.loads(response.choices[0].message.content)
+        from openai import OpenAI
+        client = OpenAI(api_key=settings.openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un experto en diagnóstico vehicular visual. "
+                        "Analiza la imagen del vehículo y responde SOLO en JSON con: "
+                        "damage_type (battery|tire|crash|engine|overheating|keys_lost|keys_locked|other), "
+                        "damage_description (descripción breve del daño visible), "
+                        "severity (low|medium|high|critical), "
+                        "confidence (0.0 a 1.0)"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Analiza esta imagen de un vehículo con problemas:"},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{image_data}"}},
+                    ],
+                },
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=500,
+        )
+        return json.loads(response.choices[0].message.content)
+
+    # 3. Fallback a Mock
+    return _mock_image_analysis(file_path)
 
 
 async def classify_damage_from_images(image_analyses: list[dict]) -> dict:

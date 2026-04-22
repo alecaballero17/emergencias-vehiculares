@@ -20,6 +20,12 @@ TYPE_LABELS = {
 }
 
 
+import google.generativeai as genai
+
+if settings.gemini_api_key:
+    genai.configure(api_key=settings.gemini_api_key)
+
+
 async def generate_incident_summary(
     incident_type: IncidentType,
     priority: IncidentPriority,
@@ -29,12 +35,8 @@ async def generate_incident_summary(
     vehicle_info: str | None,
     location_address: str | None,
 ) -> str:
-    """Genera un resumen completo y estructurado del incidente usando IA."""
-    if not settings.openai_api_key or settings.openai_api_key.startswith("sk-your"):
-        return _build_local_summary(
-            incident_type, priority, description, audio_transcription, image_descriptions, vehicle_info, location_address
-        )
-
+    """Genera un resumen completo y estructurado del incidente usando IA (Gemini o OpenAI)."""
+    
     prompt_parts = [
         f"Tipo de incidente: {TYPE_LABELS.get(incident_type, 'Desconocido')}",
         f"Prioridad: {priority.value}",
@@ -51,24 +53,46 @@ async def generate_incident_summary(
     if location_address:
         prompt_parts.append(f"Ubicación: {location_address}")
 
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Eres un coordinador de emergencias vehiculares. "
-                    "Genera una ficha de resumen estructurada y concisa del incidente para el taller mecánico asignado. "
-                    "La ficha debe ser clara, profesional y contener toda la información relevante para que el técnico "
-                    "pueda prepararse antes de llegar al lugar. Usa formato con secciones y viñetas."
-                ),
-            },
-            {"role": "user", "content": "\n".join(prompt_parts)},
-        ],
-        max_tokens=600,
+    prompt_content = "\n".join(prompt_parts)
+
+    # 1. Intentar con Gemini
+    if settings.gemini_api_key:
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(
+                f"Eres un experto coordinador de emergencias vehiculares. "
+                "Crea una ficha técnica estructurada y profesional para el mecánico que atenderá el caso. "
+                "Usa viñetas y secciones claras (FICHA TÉCNICA, DETALLES, RECOMENDACIONES).\n\n"
+                f"{prompt_content}"
+            )
+            return response.text.strip()
+        except Exception as e:
+            print(f"Error en Gemini Summary: {e}")
+
+    # 2. Intentar con OpenAI
+    if settings.openai_api_key and not settings.openai_api_key.startswith("sk-your"):
+        client = OpenAI(api_key=settings.openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un coordinador de emergencias vehiculares. "
+                        "Genera una ficha de resumen estructurada y concisa del incidente para el taller mecánico asignado. "
+                        "La ficha debe ser clara, profesional y contener toda la información relevante."
+                    ),
+                },
+                {"role": "user", "content": prompt_content},
+            ],
+            max_tokens=600,
+        )
+        return response.choices[0].message.content
+
+    # 3. Fallback a resumen local
+    return _build_local_summary(
+        incident_type, priority, description, audio_transcription, image_descriptions, vehicle_info, location_address
     )
-    return response.choices[0].message.content
 
 
 def _build_local_summary(

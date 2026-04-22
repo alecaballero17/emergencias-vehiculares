@@ -30,6 +30,16 @@ TYPE_LABELS = {
 }
 
 
+import google.generativeai as genai
+import json
+from app.config import get_settings
+
+settings = get_settings()
+
+if settings.gemini_api_key:
+    genai.configure(api_key=settings.gemini_api_key)
+
+
 async def classify_incident(
     text_description: str | None = None,
     audio_analysis: dict | None = None,
@@ -37,8 +47,47 @@ async def classify_incident(
 ) -> AIAnalysisResult:
     """
     Clasifica un incidente combinando múltiples fuentes de datos.
-    Retorna tipo, prioridad, confianza y resumen generado.
+    Usa Gemini para el razonamiento final si está disponible.
     """
+    
+    # 1. Intentar Razonamiento Avanzado con Gemini
+    if settings.gemini_api_key:
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            
+            # Preparar contexto para la IA
+            context = {
+                "user_description": text_description,
+                "audio_findings": audio_analysis,
+                "image_findings": image_analyses,
+                "possible_types": "battery|tire|crash|engine|overheating|keys_lost|keys_locked|other",
+                "possible_priorities": "low|medium|high|critical"
+            }
+            
+            prompt = (
+                "Actúa como un despachador de emergencias de élite. Analiza los datos adjuntos de un incidente "
+                "vehicular reportado por un usuario vía móvil y determina la clasificación más precisa. "
+                "Debes ser capaz de detectar contradicciones o inconsistencias entre el audio, la imagen y el texto. "
+                "Responde ÚNICAMENTE en JSON válido con este formato: "
+                '{"incident_type": "string", "priority": "string", "confidence": float, "summary": "string", "details": "string"}'
+                f"\n\nContexto: {json.dumps(context)}"
+            )
+            
+            response = model.generate_content(prompt)
+            json_text = response.text.replace("```json", "").replace("```", "").strip()
+            data = json.loads(json_text)
+            
+            return AIAnalysisResult(
+                incident_type=IncidentType(data["incident_type"]) if data["incident_type"] in [it.value for it in IncidentType] else IncidentType.OTHER,
+                priority=IncidentPriority(data["priority"]),
+                confidence=data["confidence"],
+                summary=data["summary"],
+                classification_details=data["details"]
+            )
+        except Exception as e:
+            print(f"Error en Gemini Reasoner: {e}")
+
+    # 2. Fallback a lógica de votos tradicional (Voto por pesos)
     votes: dict[str, float] = {}
     total_confidence = 0.0
     details_parts = []
@@ -48,15 +97,14 @@ async def classify_incident(
         text_type = _classify_from_text(text_description)
         votes[text_type] = votes.get(text_type, 0) + 0.3
         total_confidence += 0.3
-        details_parts.append(f"Texto: clasificado como {text_type}")
+        details_parts.append(f"Texto: {text_type}")
 
     # Análisis de audio
     if audio_analysis:
         audio_type = audio_analysis.get("probable_type", "other")
-        weight = 0.35
-        votes[audio_type] = votes.get(audio_type, 0) + weight
-        total_confidence += weight
-        details_parts.append(f"Audio: clasificado como {audio_type}")
+        votes[audio_type] = votes.get(audio_type, 0) + 0.35
+        total_confidence += 0.35
+        details_parts.append(f"Audio: {audio_type}")
 
     # Análisis de imágenes
     if image_analyses:
@@ -66,28 +114,16 @@ async def classify_incident(
             weight = 0.35 * img_conf
             votes[img_type] = votes.get(img_type, 0) + weight
             total_confidence += weight
-        details_parts.append(f"Imágenes: {len(image_analyses)} analizadas")
+        details_parts.append(f"Imágenes: {len(image_analyses)} detectadas")
 
-    # Determinar tipo ganador
-    if votes:
-        winner = max(votes, key=votes.get)
-        try:
-            incident_type = IncidentType(winner)
-        except ValueError:
-            incident_type = IncidentType.OTHER
-        confidence = min(votes[winner] / max(total_confidence, 0.01), 1.0)
-    else:
+    winner = max(votes, key=votes.get) if votes else "other"
+    try:
+        incident_type = IncidentType(winner)
+    except ValueError:
         incident_type = IncidentType.OTHER
-        confidence = 0.0
-
-    # Determinar prioridad
+    
+    confidence = min(votes[winner] / max(total_confidence, 0.01), 1.0) if votes else 0.0
     priority = PRIORITY_MAP.get(incident_type, IncidentPriority.MEDIUM)
-
-    # Si la confianza es baja, indicar incertidumbre
-    if confidence < 0.4:
-        priority = IncidentPriority.MEDIUM
-        details_parts.append("⚠️ Clasificación incierta, se recomienda revisión manual")
-
     summary = _generate_summary(incident_type, priority, confidence, text_description, audio_analysis, image_analyses)
 
     return AIAnalysisResult(
@@ -95,7 +131,7 @@ async def classify_incident(
         priority=priority,
         confidence=round(confidence, 2),
         summary=summary,
-        classification_details=" | ".join(details_parts) if details_parts else "Sin datos suficientes",
+        classification_details=" | ".join(details_parts) if details_parts else "Sin datos"
     )
 
 

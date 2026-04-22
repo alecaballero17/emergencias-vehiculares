@@ -15,8 +15,9 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
 
-    # OpenAI
+    # AI Providers
     openai_api_key: str = ""
+    gemini_api_key: str = ""
 
     # Firebase
     firebase_credentials_path: str = "firebase-credentials.json"
