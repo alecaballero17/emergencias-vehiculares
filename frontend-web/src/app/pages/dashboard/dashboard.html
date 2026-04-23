@@ -83,7 +83,7 @@
               <span class="incident-title">{{ getTypeLabel(inc.incident_type) }}</span>
               <span class="incident-meta">#{{ inc.id }} · {{ inc.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
-            <span class="badge" [class]="'priority-' + inc.priority">{{ inc.priority | uppercase }}</span>
+            <span class="badge" [class]="'priority-' + inc.priority">{{ getPriorityLabel(inc.priority) }}</span>
             <span class="badge" [class]="'status-' + inc.status">{{ getStatusLabel(inc.status) }}</span>
             <span class="row-arrow">→</span>
           </a>

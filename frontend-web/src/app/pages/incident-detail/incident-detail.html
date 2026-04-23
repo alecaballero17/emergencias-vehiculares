@@ -34,7 +34,7 @@
         </div>
         <h2>Incidente #{{ incident.id }}</h2>
         <div class="header-tags">
-          <span class="badge" [class]="'priority-' + incident.priority">{{ incident.priority }}</span>
+          <span class="badge" [class]="'priority-' + incident.priority">{{ getPriorityLabel(incident.priority) }}</span>
           <span class="badge" [class]="'status-' + incident.status">{{ getStatusLabel(incident.status) }}</span>
         </div>
       </div>
@@ -227,7 +227,7 @@
           @if (incident) {
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
               <span class="badge badge-info">{{ getTypeLabel(incident.incident_type) }}</span>
-              <span class="badge" [class]="'priority-' + incident.priority">{{ incident.priority | uppercase }}</span>
+              <span class="badge" [class]="'priority-' + incident.priority">{{ getPriorityLabel(incident.priority) }}</span>
             </div>
           }
 

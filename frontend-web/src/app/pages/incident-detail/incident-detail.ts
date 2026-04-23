@@ -97,6 +97,13 @@ export class IncidentDetailComponent implements OnInit {
     return map[s] || s;
   }
 
+  getPriorityLabel(p: string): string {
+    const map: Record<string, string> = {
+      low: 'BAJA', medium: 'MEDIA', high: 'ALTA', critical: 'CRÍTICA'
+    };
+    return map[p] || p;
+  }
+
   getImageUrl(url: string): string {
     if (url.startsWith('http')) return url;
     return `${this.apiBase}/${url}`;

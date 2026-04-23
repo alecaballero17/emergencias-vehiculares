@@ -56,7 +56,7 @@
             <tr class="animate-in">
               <td class="td-id">#{{ inc.id }}</td>
               <td class="td-type">{{ getTypeLabel(inc.incident_type) }}</td>
-              <td><span class="badge" [class]="'priority-' + inc.priority">{{ inc.priority | uppercase }}</span></td>
+              <td><span class="badge" [class]="'priority-' + inc.priority">{{ getPriorityLabel(inc.priority) }}</span></td>
               <td><span class="badge" [class]="'status-' + inc.status">{{ getStatusLabel(inc.status) }}</span></td>
               <td class="td-date">{{ inc.created_at | date:'dd/MM/yy HH:mm' }}</td>
               <td><a [routerLink]="['/incidents', inc.id]" class="btn btn-ghost btn-sm">Ver →</a></td>

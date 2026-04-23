@@ -63,6 +63,13 @@ export class DashboardComponent implements OnInit {
     return map[priority] || '';
   }
 
+  getPriorityLabel(p: string): string {
+    const map: Record<string, string> = {
+      low: 'BAJA', medium: 'MEDIA', high: 'ALTA', critical: 'CRÍTICA'
+    };
+    return map[p] || p;
+  }
+
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
       pending: 'Pendiente',
