@@ -1,165 +1,200 @@
 <p align="center">
   <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular"/>
+  <img src="https://img.shields.io/badge/Angular_20-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular"/>
   <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
-  <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/>
+  <img src="https://img.shields.io/badge/PostgreSQL_16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
+  <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini"/>
   <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase"/>
 </p>
 
-# 🚗 Plataforma Inteligente de Atención de Emergencias Vehiculares
+<h1 align="center">🚗 Plataforma Inteligente de Atención de Emergencias Vehiculares</h1>
 
-> Sistema multiplataforma que conecta a conductores con emergencias mecánicas en carretera con talleres especializados cercanos.
+<p align="center">
+  <strong>Sistema multiplataforma con IA que conecta conductores con emergencias mecánicas a talleres especializados cercanos, en tiempo real.</strong>
+</p>
 
----
-
-## 🚀 Preparación Rápida para la Defensa
-
-Para iniciar la demostración completa, abre **tres terminales** y ejecuta los siguientes comandos:
-
-### 1. Backend (Cerebro IA)
-```powershell
-cd backend
-.\venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-📍 Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-### 2. Panel Web (Administración de Talleres)
-```powershell
-cd frontend-web
-npm start
-```
-📍 Web: [http://localhost:4200](http://localhost:4200)
-
-### 3. App Móvil (Reportero SOS)
-```powershell
-cd mobile_app
-flutter run -d chrome
-```
+<p align="center">
+  <img src="https://img.shields.io/badge/versión-1.0.0-blue?style=flat-square" alt="Versión"/>
+  <img src="https://img.shields.io/badge/estado-Producción-success?style=flat-square" alt="Estado"/>
+  <img src="https://img.shields.io/badge/licencia-Académico-orange?style=flat-square" alt="Licencia"/>
+</p>
 
 ---
 
 ## 📋 Tabla de Contenidos
 
-- [Descripción](#-descripción)
+- [Descripción del Problema](#-descripción-del-problema)
+- [Flujo del Sistema](#-flujo-del-sistema)
 - [Arquitectura](#-arquitectura)
 - [Tecnologías](#-tecnologías)
-- [Módulos de IA](#-módulos-de-ia)
+- [Módulos de IA](#-módulos-de-inteligencia-artificial)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Requisitos Previos](#-requisitos-previos)
 - [Instalación y Configuración](#-instalación-y-configuración)
 - [Ejecución](#-ejecución)
 - [API Endpoints](#-api-endpoints)
 - [Credenciales de Prueba](#-credenciales-de-prueba)
-- [Capturas de Pantalla](#-capturas-de-pantalla)
+- [Modelos de Datos](#-modelos-de-datos)
 - [Autores](#-autores)
 
 ---
 
-## 📖 Descripción
+## 📖 Descripción del Problema
 
-La plataforma resuelve el problema que enfrentan los conductores al sufrir una avería mecánica en carretera: desconocen qué talleres están cerca, no pueden evaluar su especialidad o disponibilidad, y carecen de un canal eficiente para comunicar la naturaleza exacta del problema.
+En entornos urbanos y carreteras, los conductores frecuentemente enfrentan situaciones imprevistas como fallas mecánicas, pinchazos de llanta, problemas de batería, sobrecalentamiento del motor o accidentes leves. El proceso actual de conseguir ayuda es **ineficiente, lento y poco confiable**.
 
-### ¿Cómo funciona?
+### Problemas que resuelve
 
-1. **El cliente reporta** una emergencia desde la app móvil con texto, fotos, audio y GPS.
-2. **La IA procesa** automáticamente toda la evidencia multimedia.
-3. **El sistema clasifica** el tipo de incidente y su prioridad mediante votación ponderada.
-4. **El motor de asignación** encuentra el mejor taller según distancia, especialidad, disponibilidad y carga de trabajo.
-5. **El taller recibe** la notificación, acepta el servicio y envía a su técnico.
-6. **El cliente paga** al finalizar el servicio, con una comisión del 10% para la plataforma.
+| Para el Conductor | Para el Taller |
+|---|---|
+| ❌ Dependencia de llamadas telefónicas | ❌ Sin plataforma para recibir solicitudes |
+| ❌ Falta de información clara sobre el problema | ❌ Dificultad para evaluar la naturaleza del problema |
+| ❌ Tiempos de respuesta impredecibles | ❌ No puede priorizar casos urgentes |
+| ❌ Dificultad para encontrar el taller adecuado | ❌ Sin trazabilidad del servicio |
+| ❌ Ausencia de seguimiento en tiempo real | ❌ Sin sistema de cobro integrado |
+
+### Nuestra Solución
+
+Una plataforma inteligente que utiliza **Inteligencia Artificial (Google Gemini)** para analizar automáticamente la emergencia del conductor a partir de fotos, audio y ubicación GPS, clasificar el tipo de incidente y su prioridad, y asignar el taller más adecuado considerando distancia, especialidad y disponibilidad.
+
+---
+
+## 🔄 Flujo del Sistema
+
+```
+  📱 CLIENTE (App Móvil)                    🖥️ TALLER (Panel Web)
+
+  ┌─────────────────────┐
+  │ 1. Reporta emergencia│
+  │    📸 Foto + 🎤 Audio│
+  │    📍 GPS automático │
+  │    📝 Descripción    │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │ 2. IA Gemini analiza │
+  │    • Transcribe audio│
+  │    • Analiza imagen  │
+  │    • Clasifica tipo  │
+  │    • Asigna prioridad│
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐         ┌─────────────────────┐
+  │ 3. Motor de          │────────▶│ 4. Taller recibe     │
+  │    Asignación         │         │    notificación      │
+  │    Inteligente        │         │    con diagnóstico IA│
+  └──────────────────────┘         └──────────┬──────────┘
+                                              │
+                                              ▼
+  ┌─────────────────────┐         ┌─────────────────────┐
+  │ 6. Cliente ve        │◀────────│ 5. Taller acepta,    │
+  │    seguimiento y     │         │    asigna técnico,   │
+  │    paga desde la app │         │    completa servicio │
+  └─────────────────────┘         └─────────────────────┘
+```
 
 ---
 
 ## 🏗 Arquitectura
 
 ```
-┌─────────────────┐     ┌─────────────────┐
-│   📱 Flutter     │     │  🖥️ Angular 20   │
-│   (Clientes)     │     │   (Talleres)     │
-└────────┬────────┘     └────────┬────────┘
-         │    HTTPS + JWT        │
-         └──────────┬────────────┘
-                    │
-          ┌─────────▼─────────┐
-          │  ⚙️ FastAPI        │
-          │  Backend API       │
-          │  Puerto 8000       │
-          ├────────────────────┤
-          │ 🧠 Módulos IA      │
-          │ • AudioProcessor   │
-          │ • ImageClassifier  │
-          │ • IncidentClassif. │
-          │ • SummaryGenerator │
-          ├────────────────────┤
-          │ 🔍 Servicios       │
-          │ • IncidentService  │
-          │ • AssignmentService│
-          │ • NotificationServ.│
-          └─────────┬─────────┘
-                    │
-        ┌───────────┼───────────┐
-        │           │           │
-  ┌─────▼─────┐ ┌──▼───┐ ┌────▼─────┐
-  │🗄️ Postgres│ │☁️ Open│ │🔔 Firebase│
-  │   SQL 16  │ │  AI  │ │   FCM    │
-  └───────────┘ └──────┘ └──────────┘
+┌──────────────────────┐      ┌──────────────────────┐
+│    📱 Flutter App     │      │   🖥️ Angular 20 Web   │
+│    (Clientes)         │      │   (Panel de Talleres) │
+│                       │      │                       │
+│  • Reporte SOS        │      │  • Dashboard          │
+│  • Historial          │      │  • Gestión Incidentes │
+│  • Pagos              │      │  • Técnicos           │
+│  • Seguimiento        │      │  • Finanzas           │
+└───────────┬───────────┘      └───────────┬───────────┘
+            │         HTTPS + JWT          │
+            └──────────────┬───────────────┘
+                           │
+                ┌──────────▼──────────┐
+                │   ⚙️ FastAPI Backend │
+                │     Puerto 8000     │
+                ├─────────────────────┤
+                │  🧠 Motor de IA     │
+                │  ├─ Gemini Flash    │
+                │  ├─ Análisis Imagen │
+                │  ├─ Transcripción   │
+                │  ├─ Clasificación   │
+                │  └─ Resumen         │
+                ├─────────────────────┤
+                │  🔧 Servicios       │
+                │  ├─ Asignación      │
+                │  ├─ Notificaciones  │
+                │  ├─ Pagos           │
+                │  └─ Geolocalización │
+                └──────────┬──────────┘
+                           │
+          ┌────────────────┼────────────────┐
+          │                │                │
+   ┌──────▼──────┐  ┌─────▼──────┐  ┌──────▼──────┐
+   │ 🗄️ PostgreSQL│  │ 🤖 Google  │  │ 🔔 Firebase │
+   │     16       │  │   Gemini   │  │    FCM      │
+   │  (10 tablas) │  │  (IA API)  │  │  (Push)     │
+   └─────────────┘  └────────────┘  └─────────────┘
 ```
 
 ---
 
 ## 🛠 Tecnologías
 
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| **Backend** | FastAPI + Uvicorn | Python 3.12 |
-| **ORM** | SQLAlchemy | 2.x |
-| **Migraciones** | Alembic | - |
-| **Base de Datos** | PostgreSQL | 16 |
-| **Frontend Web** | Angular (Standalone) | 20 |
-| **App Móvil** | Flutter | 3.x |
-| **IA - Audio** | OpenAI Whisper | API |
-| **IA - Imágenes** | GPT-4o Vision | API |
-| **IA - Texto** | GPT-4o-mini | API |
-| **Notificaciones** | Firebase Cloud Messaging | - |
-| **Autenticación** | JWT (HS256) + bcrypt | 24h expiry |
-| **Estilos** | SCSS + Google Fonts (Inter) | - |
+| Capa | Tecnología | Propósito |
+|------|-----------|-----------|
+| **Backend** | FastAPI + Uvicorn (Python 3.12) | API REST, lógica de negocio |
+| **ORM** | SQLAlchemy 2.x + Alembic | Mapeo de datos y migraciones |
+| **Base de Datos** | PostgreSQL 16 | Persistencia relacional |
+| **Frontend Web** | Angular 20 (Standalone) | Dashboard de talleres |
+| **App Móvil** | Flutter 3.x (Dart) | Aplicación del cliente |
+| **IA Multimodal** | Google Gemini 2.5 Flash | Análisis de imagen, audio y texto |
+| **Geocodificación** | Nominatim (OpenStreetMap) | Dirección legible desde coordenadas |
+| **Notificaciones** | Firebase Cloud Messaging (FCM) | Push notifications |
+| **Autenticación** | JWT (HS256) + bcrypt | Tokens con expiración 24h |
+| **Estilos** | SCSS + Google Fonts (Inter) | UI premium con dark theme |
 
 ---
 
-## 🧠 Módulos de IA
+## 🧠 Módulos de Inteligencia Artificial
 
-### Procesamiento de Audio
-- **Whisper API**: Transcribe grabaciones de audio del conductor a texto.
-- **GPT-4o-mini**: Extrae palabras clave, tipo de incidente y severidad de la transcripción.
+### Procesamiento Multimodal (Gemini 2.5 Flash)
 
-### Análisis de Imágenes
-- **GPT-4o Vision**: Analiza fotografías del vehículo para identificar el tipo de daño, componentes afectados y nivel de severidad.
+El sistema utiliza **Google Gemini** como motor de IA unificado para procesar múltiples tipos de evidencia en una sola llamada:
 
-### Clasificación Inteligente
-Sistema de **votación ponderada** que combina las tres fuentes de información:
+| Capacidad | Descripción |
+|-----------|-------------|
+| 🎤 **Transcripción de Audio** | Convierte grabaciones de voz del conductor a texto |
+| 📸 **Análisis de Imágenes** | Identifica daños, componentes afectados y severidad |
+| 🧾 **Generación de Ficha** | Produce un reporte estructurado: Situación, Diagnóstico, Recomendación |
+
+### Clasificación Inteligente por Votación Ponderada
+
+El sistema combina las tres fuentes de información para determinar el tipo de incidente:
 
 | Fuente | Peso |
 |--------|------|
-| Texto descriptivo | 30% |
-| Audio transcrito | 35% |
-| Imágenes analizadas | 35% |
+| 📝 Texto descriptivo | 30% |
+| 🎤 Audio transcrito | 35% |
+| 📸 Imágenes analizadas | 35% |
 
-Determina: **tipo de incidente** (8 categorías), **prioridad** (baja/media/alta/crítica) y **nivel de confianza**.
+**Resultado:** Tipo de incidente (8 categorías), prioridad (Baja/Media/Alta/Crítica) y nivel de confianza (0-100%).
 
 ### Motor de Asignación Inteligente
-Algoritmo multifactor para seleccionar el mejor taller:
 
-| Factor | Peso |
-|--------|------|
-| Distancia geográfica (Haversine) | 35% |
-| Especialidad del taller | 25% |
-| Disponibilidad de técnicos | 20% |
-| Capacidad del taller | 10% |
-| Carga de trabajo actual | 10% |
+Algoritmo multifactor para encontrar el mejor taller disponible:
 
-> Radio máximo de búsqueda: **50 km**
+| Factor | Peso | Método |
+|--------|------|--------|
+| 📍 Distancia geográfica | 35% | Fórmula de Haversine |
+| 🔧 Especialidad del taller | 25% | Match tipo de incidente |
+| 👷 Disponibilidad de técnicos | 20% | Técnicos libres |
+| 🏭 Capacidad del taller | 10% | Slots disponibles |
+| 📊 Carga de trabajo actual | 10% | Incidentes activos |
+
+> 📍 Radio máximo de búsqueda: **50 km**
 
 ---
 
@@ -167,47 +202,82 @@ Algoritmo multifactor para seleccionar el mejor taller:
 
 ```
 emergencias-vehiculares/
-├── 📂 backend/                  # API REST - FastAPI
+│
+├── 📂 backend/                      # API REST - FastAPI (Python)
 │   ├── app/
-│   │   ├── main.py              # Punto de entrada
-│   │   ├── config.py            # Variables de entorno
-│   │   ├── database.py          # Conexión PostgreSQL
-│   │   ├── seed.py              # Datos de prueba
-│   │   ├── ai/                  # Módulos de IA
-│   │   │   ├── audio_processor.py
-│   │   │   ├── image_classifier.py
-│   │   │   ├── incident_classifier.py
-│   │   │   └── summary_generator.py
-│   │   ├── models/              # Modelos SQLAlchemy (10)
-│   │   ├── routers/             # Endpoints API (7 routers)
-│   │   ├── schemas/             # Validación Pydantic
-│   │   ├── services/            # Lógica de negocio
-│   │   └── utils/               # Seguridad y geolocalización
-│   ├── alembic/                 # Migraciones de BD
-│   ├── uploads/                 # Archivos multimedia
+│   │   ├── main.py                  # Punto de entrada + CORS
+│   │   ├── config.py                # Variables de entorno
+│   │   ├── database.py              # Conexión PostgreSQL
+│   │   ├── seed.py                  # Datos de prueba
+│   │   ├── ai/                      # 🧠 Módulos de IA
+│   │   │   ├── multimodal_processor.py   # Procesador Gemini unificado
+│   │   │   ├── audio_processor.py        # Transcripción de audio
+│   │   │   ├── image_classifier.py       # Análisis de imágenes
+│   │   │   ├── incident_classifier.py    # Votación ponderada
+│   │   │   └── summary_generator.py      # Generación de fichas
+│   │   ├── models/                  # Modelos SQLAlchemy (10 tablas)
+│   │   ├── routers/                 # Endpoints API (7 routers)
+│   │   │   ├── auth.py              # Registro e inicio de sesión
+│   │   │   ├── users.py             # Perfil de usuario
+│   │   │   ├── vehicles.py          # CRUD de vehículos
+│   │   │   ├── incidents.py         # Gestión de emergencias
+│   │   │   ├── workshops.py         # Operaciones de talleres
+│   │   │   ├── payments.py          # Sistema de pagos
+│   │   │   └── notifications.py     # Notificaciones
+│   │   ├── schemas/                 # Validación Pydantic
+│   │   ├── services/                # Lógica de negocio
+│   │   │   ├── incident_service.py  # Procesamiento de incidentes
+│   │   │   ├── assignment_service.py # Asignación inteligente
+│   │   │   └── notification_service.py # Notificaciones push
+│   │   └── utils/                   # Utilidades
+│   │       ├── security.py          # JWT + bcrypt
+│   │       └── geocoding.py         # Coordenadas → dirección
+│   ├── alembic/                     # Migraciones de BD
+│   ├── uploads/                     # Archivos multimedia
 │   ├── requirements.txt
-│   └── alembic.ini
+│   └── .env                         # Variables de entorno
 │
-├── 📂 frontend-web/             # App Web - Angular 20
+├── 📂 frontend-web/                 # Panel Web - Angular 20
 │   ├── src/app/
-│   │   ├── guards/              # AuthGuard
-│   │   ├── interceptors/        # JWT Interceptor
-│   │   ├── layout/              # Sidebar + Navigation
-│   │   ├── models/              # Interfaces TypeScript
-│   │   ├── pages/               # 8 páginas
-│   │   │   ├── login/
-│   │   │   ├── dashboard/
-│   │   │   ├── available/
-│   │   │   ├── incidents/
-│   │   │   ├── incident-detail/
-│   │   │   ├── technicians/
-│   │   │   ├── notifications/
-│   │   │   └── profile/
-│   │   └── services/            # AuthService, WorkshopService
-│   └── src/environments/
+│   │   ├── guards/                  # AuthGuard (protección de rutas)
+│   │   ├── interceptors/            # JWT Interceptor automático
+│   │   ├── layout/                  # Sidebar + Navegación
+│   │   ├── models/                  # Interfaces TypeScript
+│   │   ├── pages/                   # 8 páginas
+│   │   │   ├── login/               # Inicio de sesión
+│   │   │   ├── dashboard/           # Métricas y estadísticas
+│   │   │   ├── available/           # Incidentes disponibles
+│   │   │   ├── incidents/           # Mis incidentes
+│   │   │   ├── incident-detail/     # Detalle + asignación IA
+│   │   │   ├── technicians/         # Gestión de técnicos
+│   │   │   ├── notifications/       # Centro de notificaciones
+│   │   │   ├── finances/            # Reporte financiero
+│   │   │   └── profile/             # Perfil del taller
+│   │   └── services/                # Comunicación con API
+│   └── src/styles.scss              # Sistema de diseño global
 │
-├── 📂 docs/                     # Documentación y diagramas
-│   └── diagramas-puds.md
+├── 📂 mobile_app/                   # App Móvil - Flutter
+│   ├── lib/
+│   │   ├── main.dart                # Punto de entrada
+│   │   ├── core/
+│   │   │   ├── app_theme.dart       # Tema dark premium
+│   │   │   └── api_constants.dart   # URLs del backend
+│   │   ├── screens/
+│   │   │   ├── login_screen.dart    # Inicio de sesión
+│   │   │   ├── register_screen.dart # Registro de usuario
+│   │   │   ├── home_screen.dart     # Pantalla principal + SOS
+│   │   │   ├── report_incident_screen.dart  # Reporte con foto/audio/GPS
+│   │   │   ├── incident_detail_screen.dart  # Detalle + pagos
+│   │   │   ├── incident_history_screen.dart # Historial de reportes
+│   │   │   └── vehicles_screen.dart # Gestión de vehículos
+│   │   └── services/
+│   │       ├── auth_service.dart     # Autenticación
+│   │       ├── incident_service.dart # Reportes y pagos
+│   │       └── vehicle_service.dart  # CRUD vehículos
+│   └── pubspec.yaml                 # Dependencias Flutter
+│
+├── 📂 docs/                         # Documentación
+│   └── diagramas-puds.md            # Diagramas UML
 │
 └── .gitignore
 ```
@@ -216,11 +286,12 @@ emergencias-vehiculares/
 
 ## 📌 Requisitos Previos
 
-| Software | Versión mínima | Descarga |
+| Software | Versión Mínima | Descarga |
 |----------|---------------|----------|
 | Python | 3.12+ | [python.org](https://www.python.org/downloads/) |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
-| PostgreSQL | 16 | [postgresql.org](https://www.postgresql.org/download/) |
+| PostgreSQL | 16+ | [postgresql.org](https://www.postgresql.org/download/) |
+| Flutter SDK | 3.x | [flutter.dev](https://flutter.dev/docs/get-started/install) |
 | Angular CLI | 20+ | `npm install -g @angular/cli` |
 | Git | 2.x | [git-scm.com](https://git-scm.com/) |
 
@@ -235,7 +306,7 @@ git clone https://github.com/alecaballero17/emergencias-vehiculares.git
 cd emergencias-vehiculares
 ```
 
-### 2. Configurar la Base de Datos
+### 2. Crear la Base de Datos
 
 ```sql
 -- Desde psql o pgAdmin:
@@ -247,10 +318,9 @@ CREATE DATABASE emergencias_vehiculares;
 ```bash
 cd backend
 
-# Crear entorno virtual
+# Crear y activar entorno virtual
 python -m venv venv
 
-# Activar entorno virtual
 # Windows:
 .\venv\Scripts\Activate.ps1
 # Linux/Mac:
@@ -265,15 +335,25 @@ pip install -r requirements.txt
 Crear archivo `backend/.env`:
 
 ```env
+# === Base de Datos ===
 DATABASE_URL=postgresql://postgres:123456@localhost:5432/emergencias_vehiculares
-JWT_SECRET_KEY=tu_clave_secreta_jwt
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION_HOURS=24
-OPENAI_API_KEY=sk-tu-clave-de-openai
-FIREBASE_CREDENTIALS_PATH=path/to/firebase-credentials.json
+
+# === JWT ===
+SECRET_KEY=tu-clave-secreta-segura
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# === Google Gemini (IA) ===
+GEMINI_API_KEY=tu-api-key-de-gemini
+
+# === Firebase (Notificaciones Push) ===
+FIREBASE_CREDENTIALS_PATH=firebase-credentials.json
+
+# === Configuración ===
 UPLOAD_DIR=uploads
-MAX_UPLOAD_SIZE=10485760
-COMMISSION_RATE=0.10
+MAX_IMAGE_SIZE_MB=10
+MAX_AUDIO_SIZE_MB=25
+PLATFORM_COMMISSION_PERCENT=10.0
 ```
 
 ### 5. Ejecutar migraciones y datos de prueba
@@ -282,7 +362,7 @@ COMMISSION_RATE=0.10
 # Aplicar migraciones
 alembic upgrade head
 
-# Cargar datos de prueba
+# Cargar datos de prueba (talleres, técnicos, usuarios)
 python -m app.seed
 ```
 
@@ -290,109 +370,133 @@ python -m app.seed
 
 ```bash
 cd ../frontend-web
-
-# Instalar dependencias
 npm install
+```
+
+### 7. Configurar la App Móvil
+
+```bash
+cd ../mobile_app
+flutter pub get
 ```
 
 ---
 
 ## ▶️ Ejecución
 
-### Backend (API)
+Abrir **tres terminales** y ejecutar cada componente:
+
+### Terminal 1 — Backend (API + IA)
 
 ```bash
 cd backend
 .\venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-📍 API disponible en: **http://localhost:8000**
-📍 Documentación Swagger: **http://localhost:8000/docs**
+| Recurso | URL |
+|---------|-----|
+| 🌐 API | http://localhost:8000 |
+| 📖 Swagger (Documentación) | http://localhost:8000/docs |
+| 🔀 ReDoc | http://localhost:8000/redoc |
 
-### Frontend Web (Talleres)
+### Terminal 2 — Panel Web (Talleres)
 
 ```bash
 cd frontend-web
-ng serve
+npm start
 ```
 
-📍 Aplicación disponible en: **http://localhost:4200**
+| Recurso | URL |
+|---------|-----|
+| 🖥️ Dashboard de Talleres | http://localhost:4200 |
+
+### Terminal 3 — App Móvil (Clientes)
+
+```bash
+cd mobile_app
+flutter run -d chrome
+```
+
+> 💡 También puedes ejecutar en un emulador Android o dispositivo físico con `flutter run`.
 
 ---
 
 ## 📡 API Endpoints
 
-### Autenticación
+### 🔐 Autenticación
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/auth/register` | Registro de usuario |
-| POST | `/api/auth/login` | Inicio de sesión (retorna JWT) |
+| `POST` | `/api/auth/register` | Registro de nuevo usuario |
+| `POST` | `/api/auth/login` | Inicio de sesión → JWT Token |
 
-### Usuarios
+### 👤 Usuarios
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/users/me` | Perfil del usuario autenticado |
-| PUT | `/api/users/me` | Actualizar perfil |
+| `GET` | `/api/users/me` | Obtener perfil autenticado |
+| `PUT` | `/api/users/me` | Actualizar perfil |
 
-### Vehículos
+### 🚙 Vehículos
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/vehicles` | Listar vehículos del usuario |
-| POST | `/api/vehicles` | Registrar vehículo |
-| PUT | `/api/vehicles/{id}` | Editar vehículo |
-| DELETE | `/api/vehicles/{id}` | Eliminar vehículo |
+| `GET` | `/api/vehicles/` | Listar vehículos del usuario |
+| `POST` | `/api/vehicles/` | Registrar nuevo vehículo |
+| `PUT` | `/api/vehicles/{id}` | Editar vehículo |
+| `DELETE` | `/api/vehicles/{id}` | Eliminar vehículo |
 
-### Incidentes
+### 🆘 Incidentes (Emergencias)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/incidents` | Crear reporte de emergencia |
-| GET | `/api/incidents/{id}` | Detalle del incidente |
-| POST | `/api/incidents/{id}/evidence` | Subir evidencia (foto/audio) |
-| PUT | `/api/incidents/{id}/cancel` | Cancelar solicitud |
+| `POST` | `/api/incidents/` | Crear reporte multimedia (foto + audio + GPS) |
+| `GET` | `/api/incidents/` | Listar incidentes del usuario |
+| `GET` | `/api/incidents/{id}` | Detalle completo con análisis IA |
+| `PUT` | `/api/incidents/{id}/cancel` | Cancelar emergencia |
 
-### Talleres
+### 🔧 Talleres
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/workshops/profile` | Perfil del taller |
-| GET | `/api/workshops/incidents/available` | Incidentes disponibles |
-| GET | `/api/workshops/incidents/assigned` | Incidentes asignados |
-| PUT | `/api/workshops/incidents/{id}/accept` | Aceptar solicitud |
-| PUT | `/api/workshops/incidents/{id}/reject` | Rechazar solicitud |
-| PUT | `/api/workshops/incidents/{id}/complete` | Completar servicio |
-| GET | `/api/workshops/technicians` | Listar técnicos |
-| POST | `/api/workshops/technicians` | Registrar técnico |
+| `GET` | `/api/workshops/profile` | Perfil del taller autenticado |
+| `PUT` | `/api/workshops/profile` | Actualizar perfil |
+| `GET` | `/api/workshops/incidents/available` | Incidentes disponibles en zona |
+| `GET` | `/api/workshops/incidents/assigned` | Incidentes asignados al taller |
+| `PUT` | `/api/workshops/incidents/{id}/accept` | Aceptar + asignar técnico |
+| `PUT` | `/api/workshops/incidents/{id}/reject` | Rechazar solicitud |
+| `PUT` | `/api/workshops/incidents/{id}/complete` | Completar servicio + monto |
+| `GET` | `/api/workshops/technicians` | Listar técnicos |
+| `POST` | `/api/workshops/technicians` | Registrar técnico |
+| `PUT` | `/api/workshops/technicians/{id}` | Actualizar técnico |
+| `DELETE` | `/api/workshops/technicians/{id}` | Eliminar técnico |
 
-### Pagos
+### 💳 Pagos
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/payments` | Registrar pago |
-| GET | `/api/payments/{incident_id}` | Consultar pago |
+| `POST` | `/api/payments/{incident_id}` | Cliente realiza pago (QR/Efectivo/Tarjeta/Transferencia) |
+| `GET` | `/api/payments/{incident_id}` | Consultar estado del pago |
 
-### Notificaciones
+### 🔔 Notificaciones
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/api/notifications` | Listar notificaciones |
-| PUT | `/api/notifications/{id}/read` | Marcar como leída |
+| `GET` | `/api/notifications/` | Listar notificaciones del usuario |
+| `PUT` | `/api/notifications/{id}/read` | Marcar como leída |
 
 ---
 
 ## 🔐 Credenciales de Prueba
 
-### Clientes (App Móvil)
+### 📱 Clientes (App Móvil)
 
-| Email | Contraseña |
-|-------|-----------|
-| carlos@example.com | password123 |
-| maria@example.com | password123 |
+| Usuario | Email | Contraseña |
+|---------|-------|------------|
+| Carlos Mendoza | `carlos@example.com` | `password123` |
+| María García | `maria@example.com` | `password123` |
 
-### Administradores de Taller (Web)
+### 🖥️ Talleres (Panel Web)
 
 | Taller | Email | Contraseña |
-|--------|-------|-----------|
-| Taller El Rápido | elrapido@example.com | taller123 |
-| Taller López | lopez@example.com | taller123 |
-| Servicio Premium | premium@example.com | taller123 |
+|--------|-------|------------|
+| Taller Mecánico El Rápido | `elrapido@example.com` | `taller123` |
+| Taller Mecánico López | `lopez@example.com` | `taller123` |
+| Servicio Automotriz Premium | `premium@example.com` | `taller123` |
 
 ---
 
@@ -400,21 +504,52 @@ ng serve
 
 El sistema cuenta con **10 modelos** y **7 enumeraciones**:
 
-| Modelo | Descripción |
-|--------|-------------|
-| User | Usuarios (clientes y administradores de taller) |
-| Vehicle | Vehículos registrados por los clientes |
-| Workshop | Talleres mecánicos con ubicación y especialidades |
-| Technician | Técnicos asociados a cada taller |
-| Incident | Emergencias reportadas con información de IA |
-| Evidence | Evidencia multimedia (imágenes, audio) |
-| Payment | Pagos con comisión de plataforma |
-| Notification | Notificaciones push y en app |
-| ServiceHistory | Historial de acciones por incidente |
+| Modelo | Descripción | Relaciones |
+|--------|-------------|------------|
+| `User` | Clientes registrados | → Vehículos, Incidentes |
+| `Vehicle` | Vehículos del cliente | → Incidentes |
+| `Workshop` | Talleres mecánicos con ubicación y especialidades | → Técnicos, Incidentes |
+| `Technician` | Técnicos con especialidades | → Taller |
+| `Incident` | Emergencias con análisis IA, prioridad y estado | → Usuario, Vehículo, Taller, Evidencias, Pago |
+| `Evidence` | Evidencia multimedia (imágenes, audio, texto) | → Incidente |
+| `Payment` | Pagos con comisión y método de pago | → Incidente |
+| `Notification` | Notificaciones push y en-app | → Usuario/Taller |
+| `ServiceHistory` | Historial de cambios de estado por incidente | → Incidente |
 
-**Tipos de incidente:** Llanta ponchada, Falla de motor, Batería descargada, Accidente, Bloqueo de llaves, Combustible vacío, Sobrecalentamiento, Otro.
+### Tipos de Incidente
 
-**Estados:** Pendiente → Asignado → En Progreso → Completado / Cancelado.
+| Tipo | Emoji | Descripción |
+|------|-------|-------------|
+| `tire` | 🛞 | Llanta ponchada |
+| `engine` | 🔧 | Falla de motor |
+| `battery` | 🔋 | Batería descargada |
+| `crash` | 💥 | Accidente/Colisión |
+| `keys_lost` | 🔑 | Llave perdida |
+| `keys_locked` | 🔐 | Llave dentro del vehículo |
+| `overheating` | 🌡️ | Sobrecalentamiento |
+| `other` | ❓ | Otro |
+
+### Flujo de Estados
+
+```
+PENDIENTE → ASIGNADO → EN PROCESO → COMPLETADO → PAGADO
+                                  ↘ CANCELADO
+```
+
+---
+
+## 💰 Modelo de Comisión
+
+La plataforma opera con un modelo de comisión del **10%** que se descuenta al taller:
+
+| Concepto | Ejemplo |
+|----------|---------|
+| Costo del servicio (fijado por el taller) | Bs. 500 |
+| **Cliente paga** | **Bs. 500** |
+| Comisión plataforma (10%) | - Bs. 50 |
+| **Taller recibe** | **Bs. 450** |
+
+> El cliente paga únicamente el monto del servicio. La comisión es transparente y se refleja en el panel financiero del taller.
 
 ---
 
@@ -422,16 +557,22 @@ El sistema cuenta con **10 modelos** y **7 enumeraciones**:
 
 | Nombre | GitHub | Rol |
 |--------|--------|-----|
-| Ale Caballero | [@alecaballero17](https://github.com/alecaballero17) | Desarrollador |
+| Ale Caballero | [@alecaballero17](https://github.com/alecaballero17) | Desarrollador Full Stack |
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto fue desarrollado como proyecto académico universitario.
+Este proyecto fue desarrollado como **trabajo de grado** para la materia de Sistemas de Información en la Universidad Autónoma Gabriel René Moreno (UAGRM), Santa Cruz de Bolivia.
 
 ---
 
 <p align="center">
-  Desarrollado con ❤️ usando FastAPI, Angular y Flutter
+  <sub>Desarrollado con ❤️ en Santa Cruz, Bolivia — 2026</sub>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/Angular-DD0031?style=flat-square&logo=angular&logoColor=white" alt="Angular"/>
+  <img src="https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Flutter"/>
+  <img src="https://img.shields.io/badge/Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white" alt="Gemini"/>
 </p>
