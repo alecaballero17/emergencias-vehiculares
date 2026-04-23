@@ -18,7 +18,7 @@ async def transcribe_audio(file_path: str) -> str:
     # 1. Intentar con Gemini (Gratis y Multimodal)
     if settings.gemini_api_key:
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-flash-latest")
             with open(file_path, "rb") as f:
                 audio_data = f.read()
             
@@ -30,6 +30,7 @@ async def transcribe_audio(file_path: str) -> str:
                 "Transcribe únicamente este audio a texto en español. "
                 "No añadas comentarios, solo el texto transcrito."
             ])
+            print("[Gemini] Transcripción de audio exitosa")
             return response.text.strip()
         except Exception as e:
             print(f"Error en Gemini Transcription: {e}")
@@ -54,7 +55,7 @@ async def extract_audio_keywords(transcription: str) -> dict:
     # 1. Intentar con Gemini
     if settings.gemini_api_key:
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-flash-latest")
             prompt = (
                 "Eres un experto en diagnóstico vehicular. Analiza la siguiente transcripción "
                 "de una emergencia y extrae información estructurada. "
@@ -67,6 +68,7 @@ async def extract_audio_keywords(transcription: str) -> dict:
             response = model.generate_content(prompt)
             # Limpiar posibles bloques de código markdown
             json_text = response.text.replace("```json", "").replace("```", "").strip()
+            print("[Gemini] Extracción de keywords exitosa")
             return json.loads(json_text)
         except Exception as e:
             print(f"Error en Gemini Keywords: {e}")

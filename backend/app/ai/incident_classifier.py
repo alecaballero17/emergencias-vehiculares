@@ -53,7 +53,7 @@ async def classify_incident(
     # 1. Intentar Razonamiento Avanzado con Gemini
     if settings.gemini_api_key:
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-flash-latest")
             
             # Preparar contexto para la IA
             context = {
@@ -64,23 +64,43 @@ async def classify_incident(
                 "possible_priorities": "low|medium|high|critical"
             }
             
-            prompt = (
-                "Actúa como un despachador de emergencias de élite. Analiza los datos adjuntos de un incidente "
-                "vehicular reportado por un usuario vía móvil y determina la clasificación más precisa. "
-                "Debes ser capaz de detectar contradicciones o inconsistencias entre el audio, la imagen y el texto. "
-                "Responde ÚNICAMENTE en JSON válido con este formato: "
-                '{"incident_type": "string", "priority": "string", "confidence": float, "summary": "string", "details": "string"}'
-                f"\n\nContexto: {json.dumps(context)}"
-            )
+            prompt = f"""
+            Actúa como un despachador de emergencias de élite y experto mecánico.
+            Analiza los datos adjuntos y determina la clasificación más precisa. 
+            Detecta inconsistencias (ej: si el usuario dice "batería" pero la imagen muestra un "choque", prioriza la imagen).
+
+            RESPONDE ÚNICAMENTE EN JSON:
+            {{
+                "incident_type": "battery|tire|crash|engine|overheating|keys_lost|keys_locked|other",
+                "priority": "low|medium|high|critical",
+                "confidence": 0.0-1.0,
+                "summary": "GENERAR FICHA TÉCNICA CON ESTE FORMATO EXACTO:
+                           🚨 **SITUACIÓN:** (1 oración)
+                           🛠️ **DIAGNÓSTICO:** (2-3 puntos clave)
+                           🧰 **RECOMENDACIÓN:** (Herramientas necesarias)",
+                "details": "Explicación técnica breve del porqué de esta clasificación"
+            }}
+
+            DATOS:
+            {json.dumps(context)}
+            """
             
             response = model.generate_content(prompt)
-            json_text = response.text.replace("```json", "").replace("```", "").strip()
-            data = json.loads(json_text)
             
+            # Limpiar respuesta
+            text = response.text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+                
+            data = json.loads(text)
+            
+            print(f"[Gemini] Clasificación multimodal inteligente exitosa: {data.get('incident_type')}")
             return AIAnalysisResult(
                 incident_type=IncidentType(data["incident_type"]) if data["incident_type"] in [it.value for it in IncidentType] else IncidentType.OTHER,
                 priority=IncidentPriority(data["priority"]),
-                confidence=data["confidence"],
+                confidence=round(data["confidence"] * 100, 2),
                 summary=data["summary"],
                 classification_details=data["details"]
             )

@@ -19,7 +19,7 @@ async def analyze_image(file_path: str) -> dict:
     # 1. Intentar con Gemini
     if settings.gemini_api_key:
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-flash-latest")
             img = Image.open(file_path)
             
             prompt = (
@@ -32,10 +32,29 @@ async def analyze_image(file_path: str) -> dict:
             )
             
             response = model.generate_content([prompt, img])
-            json_text = response.text.replace("```json", "").replace("```", "").strip()
-            return json.loads(json_text)
+            
+            # Limpiar la respuesta de posibles bloques de código markdown
+            text = response.text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+                
+            result = json.loads(text)
+            
+            if 'confidence' in result:
+                # Asegurar que confidence esté en rango 0-100 para el frontend
+                if result['confidence'] <= 1.0:
+                    result['confidence'] = round(result['confidence'] * 100, 2)
+            
+            print(f"[Gemini] Análisis visual exitoso: {result.get('damage_type')}")
+            return result
         except Exception as e:
             print(f"Error en Gemini Image Analysis: {e}")
+            # Si falla Gemini y no hay OpenAI, lanzamos el error para no usar Mock 
+            # e identificar el problema real en lugar de mostrar datos falsos de batería.
+            if not settings.openai_api_key:
+                raise e
 
     # 2. Intentar con OpenAI (GPT-4o)
     if settings.openai_api_key and not settings.openai_api_key.startswith("sk-your"):

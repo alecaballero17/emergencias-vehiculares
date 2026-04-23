@@ -78,8 +78,8 @@ class IncidentService {
             'Accept': 'application/json',
           },
           // Aumentamos el timeout para el procesamiento de IA
-          sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 90),
+          receiveTimeout: const Duration(seconds: 90),
         ),
       );
 

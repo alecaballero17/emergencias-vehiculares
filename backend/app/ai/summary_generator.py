@@ -58,13 +58,16 @@ async def generate_incident_summary(
     # 1. Intentar con Gemini
     if settings.gemini_api_key:
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-flash-latest")
             response = model.generate_content(
-                f"Eres un experto coordinador de emergencias vehiculares. "
-                "Crea una ficha técnica estructurada y profesional para el mecánico que atenderá el caso. "
-                "Usa viñetas y secciones claras (FICHA TÉCNICA, DETALLES, RECOMENDACIONES).\n\n"
-                f"{prompt_content}"
+                "Genera una FICHA TÉCNICA DE INTERVENCIÓN extremadamente concisa para un mecánico.\n"
+                "Usa este formato exacto:\n"
+                "🚨 **SITUACIÓN:** (Resumen en 1 oración)\n"
+                "🛠️ **DIAGNÓSTICO PROBABLE:** (2-3 puntos clave)\n"
+                "🧰 **RECOMENDACIÓN TÉCNICA:** (Herramientas o pasos iniciales)\n\n"
+                f"DATOS:\n{prompt_content}"
             )
+            print("[Gemini] Generación de resumen técnico exitosa")
             return response.text.strip()
         except Exception as e:
             print(f"Error en Gemini Summary: {e}")

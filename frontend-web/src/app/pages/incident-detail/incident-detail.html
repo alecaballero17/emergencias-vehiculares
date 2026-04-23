@@ -66,9 +66,16 @@
           </div>
           <div class="info-item">
             <span class="info-label">Ubicación Actual</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="info-value">{{ incident.address || (incident.latitude + ', ' + incident.longitude) }}</span>
-              <a [href]="'https://www.google.com/maps?q=' + incident.latitude + ',' + incident.longitude" target="_blank" class="btn btn-ghost btn-icon btn-sm">📍</a>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <span class="info-value" style="font-weight: 600; color: var(--primary-400);">
+                📍 {{ incident.address || 'Ubicación GPS' }}
+              </span>
+              <a [href]="'https://www.google.com/maps?q=' + incident.latitude + ',' + incident.longitude" 
+                 target="_blank" 
+                 class="btn btn-outline btn-sm" 
+                 style="width: fit-content; gap: 8px;">
+                🗺️ Ver en Google Maps
+              </a>
             </div>
           </div>
           <div class="info-item">
@@ -104,8 +111,8 @@
             }
             @if (incident.ai_summary) {
               <div class="ai-item">
-                <span class="ai-label">Resumen Ejecutivo</span>
-                <div class="ai-summary-text">{{ incident.ai_summary }}</div>
+                <span class="ai-label">Ficha de Intervención (IA)</span>
+                <div class="ai-summary-text" style="white-space: pre-wrap; line-height: 1.6; font-size: 14px; background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">{{ incident.ai_summary }}</div>
               </div>
             }
             @if (incident.audio_transcription) {

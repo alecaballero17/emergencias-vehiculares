@@ -110,6 +110,7 @@ class AIAnalysisResult(BaseModel):
     confidence: float
     summary: str
     classification_details: str
+    audio_transcription: Optional[str] = None
 
 
 # --- Assignment ---
