@@ -103,7 +103,7 @@ class IncidentService {
       if (token == null) return null;
 
       final response = await _dio.get(
-        '${ApiConstants.incidents}/$id',
+        '${ApiConstants.baseUrl}/incidents/$id',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       return response.data;
@@ -137,12 +137,49 @@ class IncidentService {
       if (token == null) return false;
 
       final response = await _dio.put(
-        '${ApiConstants.incidents}/$id/cancel',
+        '${ApiConstants.baseUrl}/incidents/$id/cancel',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       return response.statusCode == 200;
     } catch (e) {
       print('Error cancelando incidente: $e');
+      return false;
+    }
+  }
+
+  Future<bool> makePayment({
+    required int incidentId,
+    required double amount,
+    String paymentMethod = 'mobile_payment',
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/payments/$incidentId',
+        data: {
+          'amount': amount,
+          'payment_method': paymentMethod,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      if (e is DioException) {
+        debugPrint('Error de pago: ${e.response?.data}');
+        // Si el pago ya fue realizado, tratarlo como éxito
+        final detail = e.response?.data?['detail']?.toString() ?? '';
+        if (detail.contains('ya fue realizado')) {
+          return true;
+        }
+      }
       return false;
     }
   }

@@ -113,6 +113,72 @@
   line-height: 1.7;
 }
 
+// Ficha de IA - Tarjetas separadas por sección
+.ai-ficha-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-ficha-section {
+  padding: 18px 20px;
+  border-radius: 12px;
+  border-left: 4px solid;
+  background: rgba(15, 23, 42, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &.ai-ficha-situacion {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(15, 23, 42, 0.5) 100%);
+  }
+
+  &.ai-ficha-diagnostico {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(15, 23, 42, 0.5) 100%);
+  }
+
+  &.ai-ficha-recomendacion {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.5) 100%);
+  }
+
+  &.ai-ficha-general {
+    border-left-color: #8b5cf6;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(15, 23, 42, 0.5) 100%);
+  }
+}
+
+.ai-ficha-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ai-ficha-icon {
+  font-size: 20px;
+}
+
+.ai-ficha-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+}
+
+.ai-ficha-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
 .evidence-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

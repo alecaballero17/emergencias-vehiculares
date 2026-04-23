@@ -13,8 +13,6 @@ from app.schemas.incident import (
     IncidentAccept, IncidentReject, IncidentComplete
 )
 from app.services.incident_service import update_incident_status, _add_history
-from app.models.payment import Payment
-from app.models.enums import PaymentStatus
 from app.services.notification_service import notify_user
 from app.utils.security import get_current_workshop
 
@@ -261,22 +259,8 @@ async def complete_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado o no en proceso")
 
-    # Registrar costo final
+    # Registrar costo final (el pago lo realiza el cliente desde la app)
     incident.final_cost = data.final_cost
-
-    # Calcular comisión del 10% (Requisito examen)
-    commission_percent = 10.0
-    commission_amount = data.final_cost * (commission_percent / 100.0)
-
-    # Crear registro de pago
-    payment = Payment(
-        incident_id=incident.id,
-        amount=data.final_cost,
-        commission_amount=commission_amount,
-        commission_percent=commission_percent,
-        payment_status=PaymentStatus.PENDING,
-    )
-    db.add(payment)
 
     incident = await update_incident_status(
         db, incident, IncidentStatus.COMPLETED,

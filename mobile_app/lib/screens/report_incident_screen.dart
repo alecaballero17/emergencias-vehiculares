@@ -29,6 +29,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   bool _isRecording = false;
   String? _audioPath;
   List<XFile> _selectedImages = [];
+  final _descriptionController = TextEditingController();
   bool _isSending = false;
   
   // Timer para grabación
@@ -41,6 +42,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     _timer?.cancel();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -167,8 +169,11 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         latitude: position.latitude,
         longitude: position.longitude,
         vehicleId: widget.selectedVehicle.id,
+        description: _descriptionController.text.trim().isNotEmpty
+            ? _descriptionController.text.trim()
+            : null,
         audioPath: _audioPath,
-        imageFiles: _selectedImages, // Enviamos el objeto XFile completo
+        imageFiles: _selectedImages,
       );
 
       if (success && mounted) {
@@ -218,9 +223,10 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Detalle de Emergencia')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Resumen Vehículo
@@ -414,19 +420,52 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 ),
               ),
             
-            const Spacer(),
+            const SizedBox(height: 30),
+            
+            // Campo de texto adicional (opcional)
+            const Text('Nota adicional (opcional)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Agrega detalles que consideres importantes', style: TextStyle(color: AppTheme.textSecondary)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Ej: El auto se detuvo en la esquina, huele a quemado...',
+                hintStyle: const TextStyle(color: Colors.white24),
+                filled: true,
+                fillColor: AppTheme.cardBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white10),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.primaryNeon),
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 30),
             
             // Botón de Envío Final
             FadeInUp(
-              child: ElevatedButton(
-                onPressed: _isSending ? null : _submitEmergency,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.errorRed,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSending ? null : _submitEmergency,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.errorRed,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                  ),
+                  child: _isSending 
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('ENVIAR REPORTE DE EMERGENCIA', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                child: _isSending 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('ENVIAR REPORTE DE EMERGENCIA', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 20),

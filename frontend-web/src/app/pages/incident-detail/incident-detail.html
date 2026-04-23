@@ -112,7 +112,17 @@
             @if (incident.ai_summary) {
               <div class="ai-item">
                 <span class="ai-label">Ficha de Intervención (IA)</span>
-                <div class="ai-summary-text" style="white-space: pre-wrap; line-height: 1.6; font-size: 14px; background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">{{ incident.ai_summary }}</div>
+                <div class="ai-ficha-grid">
+                  @for (section of parseAISummary(incident.ai_summary); track section.title) {
+                    <div class="ai-ficha-section" [class]="'ai-ficha-' + section.type">
+                      <div class="ai-ficha-header">
+                        <span class="ai-ficha-icon">{{ section.icon }}</span>
+                        <span class="ai-ficha-title">{{ section.title }}</span>
+                      </div>
+                      <p class="ai-ficha-body">{{ section.content }}</p>
+                    </div>
+                  }
+                </div>
               </div>
             }
             @if (incident.audio_transcription) {
@@ -201,17 +211,27 @@
           <h3>💳 Detalles de Facturación</h3>
           <div class="info-grid">
             <div class="info-item">
-              <span class="info-label">Costo Total del Servicio</span>
+              <span class="info-label">Cobro al Cliente</span>
               <span class="info-value money">Bs. {{ incident.payment.amount }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">Comisión</span>
-              <span class="info-value">{{ incident.payment.commission_percent }}% (Bs. {{ incident.payment.commission_amount }})</span>
+              <span class="info-label">Comisión Plataforma ({{ incident.payment.commission_percent }}%)</span>
+              <span class="info-value" style="color: var(--error-500);">- Bs. {{ incident.payment.commission_amount }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Usted Recibe</span>
+              <span class="info-value money">Bs. {{ incident.payment.amount - incident.payment.commission_amount }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Estado del Pago</span>
-              <span class="badge badge-success">{{ incident.payment.payment_status | uppercase }}</span>
+              <span class="badge badge-success">{{ getPaymentStatusLabel(incident.payment.payment_status) }}</span>
             </div>
+            @if (incident.payment.payment_method) {
+              <div class="info-item">
+                <span class="info-label">Método de Pago</span>
+                <span class="info-value">{{ getPaymentMethodLabel(incident.payment.payment_method) }}</span>
+              </div>
+            }
           </div>
         </div>
       }

@@ -109,6 +109,51 @@ export class IncidentDetailComponent implements OnInit {
     return `${this.apiBase}/${url}`;
   }
 
+  parseAISummary(summary: string): {icon: string, title: string, content: string, type: string}[] {
+    const sections: {icon: string, title: string, content: string, type: string}[] = [];
+    
+    // Patrones para extraer secciones del texto generado por Gemini
+    const patterns = [
+      { regex: /(?:🚨\s*)?SITUACI[OÓ]N:\s*(.*?)(?=(?:🛠️|🧰|DIAGN[OÓ]STICO|RECOMENDACI[OÓ]N)|$)/si, icon: '🚨', title: 'Situación', type: 'situacion' },
+      { regex: /(?:🛠️\s*)?DIAGN[OÓ]STICO:\s*(.*?)(?=(?:🧰|RECOMENDACI[OÓ]N)|$)/si, icon: '🛠️', title: 'Diagnóstico', type: 'diagnostico' },
+      { regex: /(?:🧰\s*)?RECOMENDACI[OÓ]N:\s*(.*?)$/si, icon: '🧰', title: 'Recomendación', type: 'recomendacion' },
+    ];
+
+    for (const p of patterns) {
+      const match = summary.match(p.regex);
+      if (match && match[1]) {
+        sections.push({ icon: p.icon, title: p.title, content: match[1].trim(), type: p.type });
+      }
+    }
+
+    // Si no se pudo parsear (formato diferente), mostrar todo como una sola sección
+    if (sections.length === 0) {
+      sections.push({ icon: '🤖', title: 'Análisis', content: summary, type: 'general' });
+    }
+
+    return sections;
+  }
+
+  getPaymentStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      'pending': 'PENDIENTE',
+      'completed': 'PAGADO',
+      'failed': 'FALLIDO',
+      'refunded': 'REEMBOLSADO',
+    };
+    return map[status] || status.toUpperCase();
+  }
+
+  getPaymentMethodLabel(method: string): string {
+    const map: Record<string, string> = {
+      'mobile_payment': '📱 QR / Billetera Móvil',
+      'cash': '💵 Efectivo',
+      'credit_card': '💳 Tarjeta de Crédito',
+      'debit_card': '🏦 Transferencia Bancaria',
+    };
+    return map[method] || method;
+  }
+
   /** Returns sorted technicians: best match first */
   get sortedTechnicians(): Technician[] {
     if (!this.incident) return this.technicians;
