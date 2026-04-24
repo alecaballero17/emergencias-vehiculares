@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:flutter_credit_card/flutter_credit_card.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../core/app_theme.dart';
 import '../services/incident_service.dart';
 
@@ -44,7 +47,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     }
   }
 
-  Future<void> _processPayment() async {
+  void _showPaymentFlow() {
     final cost = _incident?['final_cost'];
     if (cost == null || cost == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -59,11 +62,30 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       return;
     }
 
+    final amount = (cost as num).toDouble();
+
+    switch (_selectedPaymentMethod) {
+      case 'credit_card':
+        _showCardPayment(amount);
+        break;
+      case 'mobile_payment':
+        _showQRPayment(amount);
+        break;
+      case 'cash':
+        _showCashPayment(amount);
+        break;
+      case 'debit_card':
+        _showTransferPayment(amount);
+        break;
+    }
+  }
+
+  Future<void> _executePayment(double amount) async {
     setState(() => _isPaymentLoading = true);
 
     final success = await _incidentService.makePayment(
       incidentId: widget.incidentId,
-      amount: (cost as num).toDouble(),
+      amount: amount,
       paymentMethod: _selectedPaymentMethod,
     );
 
@@ -85,6 +107,393 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
         ),
       );
     }
+  }
+
+  // ========== FLUJO TARJETA (Estilo Stripe) ==========
+  void _showCardPayment(double amount) {
+    String cardNumber = '';
+    String expiryDate = '';
+    String cvv = '';
+    String cardHolder = '';
+    bool isCvvFocused = false;
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('💳 Pago con Tarjeta', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Total: Bs. ${amount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+
+                    // Tarjeta animada
+                    CreditCardWidget(
+                      cardNumber: cardNumber,
+                      expiryDate: expiryDate,
+                      cardHolderName: cardHolder,
+                      cvvCode: cvv,
+                      showBackView: isCvvFocused,
+                      onCreditCardWidgetChange: (_) {},
+                      cardBgColor: const Color(0xFF0D2137),
+                      glassmorphismConfig: Glassmorphism(
+                        blurX: 10, blurY: 10,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          colors: [Colors.green.withOpacity(0.3), Colors.blue.withOpacity(0.3)],
+                        ),
+                      ),
+                    ),
+
+                    // Formulario
+                    CreditCardForm(
+                      formKey: formKey,
+                      cardNumber: cardNumber,
+                      expiryDate: expiryDate,
+                      cardHolderName: cardHolder,
+                      cvvCode: cvv,
+                      onCreditCardModelChange: (model) {
+                        setModalState(() {
+                          cardNumber = model.cardNumber;
+                          expiryDate = model.expiryDate;
+                          cardHolder = model.cardHolderName;
+                          cvv = model.cvvCode;
+                          isCvvFocused = model.isCvvFocused;
+                        });
+                      },
+                      obscureCvv: true,
+                      inputConfiguration: const InputConfiguration(
+                        cardNumberDecoration: InputDecoration(
+                          labelText: 'Número de Tarjeta',
+                          hintText: 'XXXX XXXX XXXX XXXX',
+                          prefixIcon: Icon(Icons.credit_card),
+                        ),
+                        expiryDateDecoration: InputDecoration(
+                          labelText: 'Fecha Exp.',
+                          hintText: 'MM/AA',
+                          prefixIcon: Icon(Icons.date_range),
+                        ),
+                        cvvCodeDecoration: InputDecoration(
+                          labelText: 'CVV',
+                          hintText: 'XXX',
+                          prefixIcon: Icon(Icons.lock),
+                        ),
+                        cardHolderDecoration: InputDecoration(
+                          labelText: 'Nombre del Titular',
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(child: Text('Tarjeta de prueba: 4242 4242 4242 4242', style: TextStyle(color: Colors.blue, fontSize: 12))),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isPaymentLoading ? null : () {
+                          if (formKey.currentState!.validate()) {
+                            Navigator.pop(ctx);
+                            _executePayment(amount);
+                          }
+                        },
+                        icon: _isPaymentLoading
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.lock, size: 18),
+                        label: Text(_isPaymentLoading ? 'Procesando...' : 'PAGAR Bs. ${amount.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ========== FLUJO QR ==========
+  void _showQRPayment(double amount) {
+    final qrData = 'emergencias-vehiculares|pago|${widget.incidentId}|$amount|BOB';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 16),
+              const Text('📱 Pago con QR', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('Escanea el código con tu app de banca móvil', style: TextStyle(color: Colors.white54, fontSize: 13)),
+              const SizedBox(height: 20),
+
+              // QR Code
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: QrImageView(
+                  data: qrData,
+                  version: QrVersions.auto,
+                  size: 200,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Bs. ${amount.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              const Text('Tigo Money • BNB • Banco Sol • BCP', style: TextStyle(color: Colors.white38, fontSize: 12)),
+
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _executePayment(amount);
+                  },
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('YA REALICÉ EL PAGO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ========== FLUJO EFECTIVO ==========
+  void _showCashPayment(double amount) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Text('💵', style: TextStyle(fontSize: 28)),
+            SizedBox(width: 10),
+            Text('Pago en Efectivo'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Text('Bs. ${amount.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green)),
+                  const SizedBox(height: 4),
+                  const Text('Pagar directamente al técnico',
+                    style: TextStyle(color: Colors.white54, fontSize: 13)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Al confirmar, el técnico recibirá una notificación de que realizará el pago en efectivo.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCELAR', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _executePayment(amount);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('CONFIRMAR', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ========== FLUJO TRANSFERENCIA ==========
+  void _showTransferPayment(double amount) {
+    final comprobanteController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  )),
+                  const SizedBox(height: 16),
+                  const Center(child: Text('🏦 Transferencia Bancaria', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 4),
+                  Center(child: Text('Total: Bs. ${amount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.w600))),
+                  const SizedBox(height: 20),
+
+                  const Text('Datos de la cuenta:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 12),
+
+                  _buildBankRow('Banco', 'Banco Nacional de Bolivia'),
+                  _buildBankRow('Tipo de Cuenta', 'Caja de Ahorro'),
+                  _buildBankRow('Nro. de Cuenta', '4500-123456-001'),
+                  _buildBankRow('Titular', 'Emergencias Vehiculares SRL'),
+                  _buildBankRow('Moneda', 'Bolivianos (BOB)'),
+                  _buildBankRow('Monto', 'Bs. ${amount.toStringAsFixed(2)}'),
+
+                  const SizedBox(height: 20),
+                  const Text('Nro. de Comprobante:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: comprobanteController,
+                    decoration: InputDecoration(
+                      hintText: 'Ingresa el número de comprobante',
+                      prefixIcon: const Icon(Icons.receipt_long),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (comprobanteController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Ingresa el número de comprobante')),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        _executePayment(amount);
+                      },
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('CONFIRMAR TRANSFERENCIA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBankRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        ],
+      ),
+    );
   }
 
   String _getStatusText(String status) {
@@ -434,7 +843,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: (_isPaymentLoading || _selectedPaymentMethod.isEmpty) ? null : _processPayment,
+                            onPressed: (_isPaymentLoading || _selectedPaymentMethod.isEmpty) ? null : _showPaymentFlow,
                             icon: _isPaymentLoading
                                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                 : const Icon(Icons.check_circle_outline),

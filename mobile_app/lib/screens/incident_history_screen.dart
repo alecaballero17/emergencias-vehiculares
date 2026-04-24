@@ -72,7 +72,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                   itemCount: _incidents.length,
                   itemBuilder: (context, index) {
                     final item = _incidents[index];
-                    final date = DateTime.parse(item['created_at']);
+                    final date = DateTime.parse(item['created_at']).toLocal();
                     final status = item['status']?.toString() ?? 'pending';
                     
                     return FadeInUp(
