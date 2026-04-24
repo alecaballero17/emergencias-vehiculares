@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -13,11 +13,13 @@ import { environment } from '../../../environments/environment';
   templateUrl: './incident-detail.html',
   styleUrl: './incident-detail.scss'
 })
-export class IncidentDetailComponent implements OnInit {
+export class IncidentDetailComponent implements OnInit, OnDestroy {
   incident: IncidentDetail | null = null;
   technicians: Technician[] = [];
   loading = true;
   error = '';
+  
+  private pollingInterval: any;
 
   // Formulario aceptar
   selectedTechId: number | null = null;
@@ -62,6 +64,17 @@ export class IncidentDetailComponent implements OnInit {
       this.technicians = t.filter(x => x.is_available);
       this.cdr.detectChanges();
     });
+
+    // POLLING en tiempo real
+    this.pollingInterval = setInterval(() => {
+      this.refreshIncidentSilently(id);
+    }, 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
   }
 
   loadIncident(id: number): void {
@@ -79,6 +92,17 @@ export class IncidentDetailComponent implements OnInit {
       }
     });
   }
+
+  refreshIncidentSilently(id: number): void {
+    // Actualiza sin mostrar pantalla de carga
+    this.ws.getIncidentDetail(id).subscribe({
+      next: (data) => { 
+        this.incident = data; 
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
 
   getTypeLabel(type: string): string {
     const map: Record<string, string> = {

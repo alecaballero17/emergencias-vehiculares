@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -12,21 +12,25 @@ import { Incident } from '../../models/interfaces';
   templateUrl: './incidents.html',
   styleUrl: './incidents.scss'
 })
-export class IncidentsComponent implements OnInit {
+export class IncidentsComponent implements OnInit, OnDestroy {
   incidents: Incident[] = [];
   loading = false;
   statusFilter = '';
+  private pollingInterval: any;
 
   constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    setTimeout(() => { 
-      if (this.loading) {
-        this.loading = false;
-        this.cd.detectChanges();
-      }
-    }, 4000);
     this.loadIncidents();
+    this.pollingInterval = setInterval(() => {
+      this.refreshIncidentsSilently();
+    }, 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
   }
 
   loadIncidents(): void {
@@ -40,6 +44,15 @@ export class IncidentsComponent implements OnInit {
       error: () => { 
         this.incidents = [];
         this.loading = false; 
+        this.cd.detectChanges();
+      }
+    });
+  }
+
+  refreshIncidentsSilently(): void {
+    this.ws.getAssignedIncidents(this.statusFilter || undefined).subscribe({
+      next: (data) => { 
+        this.incidents = data || []; 
         this.cd.detectChanges();
       }
     });

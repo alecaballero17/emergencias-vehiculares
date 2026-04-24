@@ -35,6 +35,9 @@ dependencies:
   qr_flutter: ^4.1.0
   flutter_credit_card: ^4.0.1
 
+  # Notifications
+  flutter_local_notifications: ^17.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

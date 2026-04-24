@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_credit_card/flutter_credit_card.dart';
@@ -20,11 +21,21 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   bool _isLoading = true;
   bool _isPaymentLoading = false;
   String _selectedPaymentMethod = '';
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadDetail();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _refreshDetailSilently();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadDetail() async {
@@ -33,6 +44,15 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       setState(() {
         _incident = detail;
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshDetailSilently() async {
+    final detail = await _incidentService.getIncidentDetail(widget.incidentId);
+    if (mounted) {
+      setState(() {
+        _incident = detail;
       });
     }
   }

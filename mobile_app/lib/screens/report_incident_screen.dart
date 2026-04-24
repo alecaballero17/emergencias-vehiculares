@@ -159,6 +159,20 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
     try {
       // 1. Obtener Ubicación con Timeout de 10s
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) throw Exception('Por favor encienda el GPS.');
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Permisos de GPS denegados.');
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Permisos de GPS denegados permanentemente.');
+      }
+
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),
@@ -183,7 +197,11 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
       }
     } catch (e) {
       String errorMsg = 'Error al enviar reporte';
-      if (e is TimeoutException) errorMsg = 'No se pudo obtener el GPS (Tiempo agotado)';
+      if (e is TimeoutException) {
+        errorMsg = 'No se pudo obtener el GPS (Tiempo agotado)';
+      } else if (e is Exception) {
+        errorMsg = e.toString().replaceAll('Exception: ', '');
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

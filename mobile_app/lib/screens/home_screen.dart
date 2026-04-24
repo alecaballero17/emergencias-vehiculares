@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:animate_do/animate_do.dart';
 import '../core/app_theme.dart';
 import '../services/vehicle_service.dart';
 import '../services/incident_service.dart';
+import '../services/local_notification_service.dart';
 import '../models/vehicle_model.dart';
 import 'login_screen.dart';
 import 'report_incident_screen.dart';
@@ -20,38 +22,107 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-   final _vehicleService = VehicleService();
-   final _incidentService = IncidentService();
-   List<Vehicle> _vehicles = [];
-   Vehicle? _selectedVehicle;
-   Map<String, dynamic>? _activeIncident;
-   bool _isLoading = true;
+  final _vehicleService = VehicleService();
+  final _incidentService = IncidentService();
+  final _notificationService = LocalNotificationService();
+  
+  List<Vehicle> _vehicles = [];
+  Vehicle? _selectedVehicle;
+  Map<String, dynamic>? _activeIncident;
+  String? _lastKnownStatus;
+  bool _isLoading = true;
+  Timer? _globalPollingTimer;
 
   @override
   void initState() {
     super.initState();
+    _notificationService.init();
     _loadData();
+    _globalPollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _pollActiveIncident();
+    });
+  }
+
+  @override
+  void dispose() {
+    _globalPollingTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pollActiveIncident() async {
+    final incidents = await _incidentService.getMyIncidents();
+    if (incidents.isNotEmpty) {
+      final last = incidents.first;
+      final status = last['status'].toString().toLowerCase();
+      
+      // Si el estado cambió, enviar notificación
+      if (_lastKnownStatus != null && _lastKnownStatus != status) {
+        if ((status == 'assigned' || status == 'in_progress') && 
+            (_lastKnownStatus != 'assigned' && _lastKnownStatus != 'in_progress')) {
+          final eta = last['estimated_arrival_minutes'];
+          final etaText = eta != null ? ' Tiempo estimado: $eta minutos.' : '';
+          _notificationService.showNotification(
+            id: 1, 
+            title: '¡Taller Asignado! 🔧', 
+            body: 'Un taller ha aceptado tu emergencia y el técnico va en camino.$etaText'
+          );
+          _showInAppNotification('¡Taller Asignado! 🔧', 'El técnico va en camino.$etaText', Colors.blue);
+        } else if (status == 'completed') {
+          _notificationService.showNotification(
+            id: 2, 
+            title: '¡Servicio Finalizado! ✅', 
+            body: 'El taller ha completado el servicio. Por favor realiza el pago.'
+          );
+          _showInAppNotification('¡Servicio Finalizado! ✅', 'Por favor realiza el pago.', Colors.green);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          if (status.contains('pending') || status.contains('assigned') || status.contains('in_progress')) {
+            _activeIncident = last;
+          } else {
+            _activeIncident = null; // Ya no hay incidente activo
+          }
+          _lastKnownStatus = status;
+        });
+      }
+    }
+  }
+
+  void _showInAppNotification(String title, String body, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(body, style: const TextStyle(fontSize: 14)),
+          ],
+        ),
+        backgroundColor: color.withOpacity(0.9),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(top: 50, left: 20, right: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 5),
+        elevation: 6,
+      ),
+    );
   }
 
   Future<void> _loadData() async {
     final vehicles = await _vehicleService.getMyVehicles();
-    final incidents = await _incidentService.getMyIncidents();
+    await _pollActiveIncident(); // Carga inicial del incidente
     
-    setState(() {
-      _vehicles = vehicles;
-      if (vehicles.isNotEmpty && _selectedVehicle == null) _selectedVehicle = vehicles.first;
-      
-      // Encontrar el último incidente activo (Pendiente, Asignado o En Progreso)
-      if (incidents.isNotEmpty) {
-        final last = incidents.first;
-        final status = last['status'].toString().toLowerCase();
-        if (status.contains('pending') || status.contains('assigned') || status.contains('in_progress')) {
-          _activeIncident = last;
-        }
-      }
-      
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _vehicles = vehicles;
+        if (vehicles.isNotEmpty && _selectedVehicle == null) _selectedVehicle = vehicles.first;
+        _isLoading = false;
+      });
+    }
   }
 
   @override

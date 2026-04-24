@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:animate_do/animate_do.dart';
 import 'package:intl/intl.dart';
 import '../core/app_theme.dart';
@@ -16,11 +17,21 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
   final _incidentService = IncidentService();
   List<dynamic> _incidents = [];
   bool _isLoading = true;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadHistory();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _refreshHistorySilently();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadHistory() async {
@@ -29,6 +40,15 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
       setState(() {
         _incidents = history;
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshHistorySilently() async {
+    final history = await _incidentService.getMyIncidents();
+    if (mounted) {
+      setState(() {
+        _incidents = history;
       });
     }
   }

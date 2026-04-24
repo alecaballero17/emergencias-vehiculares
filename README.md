@@ -152,9 +152,10 @@ Una plataforma inteligente que utiliza **Inteligencia Artificial (Google Gemini)
 | **App Móvil** | Flutter 3.x (Dart) | Aplicación del cliente |
 | **IA Multimodal** | Google Gemini 2.5 Flash | Análisis de imagen, audio y texto |
 | **Geocodificación** | Nominatim (OpenStreetMap) | Dirección legible desde coordenadas |
-| **Notificaciones** | Firebase Cloud Messaging (FCM) | Push notifications |
+| **Notificaciones** | flutter_local_notifications + FCM | Notificaciones push nativas con vibración y sonido |
+| **Sincronización** | Polling Asíncrono (Timer) | Sincronización en tiempo real cada 3-5s sin WebSockets |
 | **Autenticación** | JWT (HS256) + bcrypt | Tokens con expiración 24h |
-| **Estilos** | SCSS + Google Fonts (Inter) | UI premium con dark theme |
+| **Estilos** | SCSS + Google Fonts (Inter) | UI premium con dark theme (Glassmorphism) |
 
 ---
 
@@ -419,6 +420,24 @@ flutter run -d chrome
 ```
 
 > 💡 También puedes ejecutar en un emulador Android o dispositivo físico con `flutter run`.
+
+---
+
+## 📱 Despliegue en Dispositivo Físico
+
+Para ejecutar la aplicación móvil en un teléfono físico conectado por USB, el proyecto incluye varias optimizaciones:
+
+### 1. Túnel de Comunicación (ADB Reverse)
+Para que el celular físico pueda comunicarse con el backend local (`localhost:8000`), ejecutamos:
+```bash
+adb reverse tcp:8000 tcp:8000
+```
+*Esto enruta las peticiones del celular directamente al servidor FastAPI de la computadora.*
+
+### 2. Soporte y Compatibilidad (Android 15+)
+- **Core Library Desugaring**: Habilitado en `build.gradle` para soportar APIs modernas de Java en dispositivos antiguos.
+- **Permisos Nativos Avanzados**: Solicitud explícita en tiempo de ejecución (Android 13+) para `POST_NOTIFICATIONS`, `VIBRATE`, `ACCESS_FINE_LOCATION`, etc.
+- **NDK y AGP**: Fijación de versión NDK a `25.1.8937393` y actualización a Android Gradle Plugin `8.3.2` para resolver conflictos de plugins de Flutter.
 
 ---
 
