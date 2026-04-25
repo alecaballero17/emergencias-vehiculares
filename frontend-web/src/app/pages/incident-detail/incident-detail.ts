@@ -25,7 +25,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   selectedTechId: number | null = null;
 
   // Formulario completar
-  finalCost: number = 0;
+  finalCost: number | null = null;
   completionNotes: string = '';
 
   // Formulario rechazar
@@ -235,7 +235,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   completeIncident(): void {
-    if (!this.incident) return;
+    if (!this.incident || this.finalCost === null) return;
     this.actionLoading = true;
     this.ws.completeIncident(this.incident.id, this.finalCost, this.completionNotes).subscribe({
       next: () => {

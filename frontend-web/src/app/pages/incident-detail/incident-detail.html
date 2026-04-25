@@ -350,7 +350,7 @@
 
           <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
             <button class="btn btn-ghost" (click)="showCompleteModal = false">Volver</button>
-            <button class="btn btn-primary" (click)="completeIncident()" [disabled]="actionLoading || finalCost <= 0">
+            <button class="btn btn-primary" (click)="completeIncident()" [disabled]="actionLoading || !finalCost || finalCost <= 0">
               {{ actionLoading ? 'Guardando...' : 'Completar y Cobrar' }}
             </button>
           </div>
