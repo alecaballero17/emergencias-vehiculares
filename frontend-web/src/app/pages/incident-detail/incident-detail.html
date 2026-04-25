@@ -265,8 +265,10 @@
                     <div>
                       <div class="tech-option-name">
                         {{ tech.name }}
-                        @if (isRecommended(tech)) {
-                          <span class="match-badge">⭐ Recomendado</span>
+                        @if (isBestMatch(tech)) {
+                          <span class="match-badge best">⭐ Mejor Match</span>
+                        } @else if (isRecommended(tech)) {
+                          <span class="match-badge">Recomendado</span>
                         }
                       </div>
                       <span class="tech-option-phone">{{ tech.phone }}</span>
@@ -285,17 +287,17 @@
                     }
                   </div>
                 }
-                @if (getMatchScore(tech) > 0) {
-                  <div class="tech-match-bar">
-                    <span class="match-label">Compatibilidad</span>
-                    <div class="match-bar-track">
-                      <div class="match-bar-fill" [style.width.%]="getMatchScore(tech)"
-                           [class.high-match]="getMatchScore(tech) >= 50"
-                           [class.low-match]="getMatchScore(tech) < 50"></div>
-                    </div>
-                    <span class="match-percent">{{ getMatchScore(tech) }}%</span>
+                
+                <div class="tech-match-bar">
+                  <span class="match-label">Match IA</span>
+                  <div class="match-bar-track">
+                    <div class="match-bar-fill" [style.width.%]="getMatchScore(tech)"
+                         [class.high-match]="getMatchScore(tech) >= 70"
+                         [class.med-match]="getMatchScore(tech) >= 40 && getMatchScore(tech) < 70"
+                         [class.low-match]="getMatchScore(tech) < 40"></div>
                   </div>
-                }
+                  <span class="match-percent">{{ getMatchScore(tech) }}%</span>
+                </div>
               </div>
             }
           </div>

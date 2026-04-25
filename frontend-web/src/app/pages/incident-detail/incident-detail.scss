@@ -392,6 +392,12 @@
   border-radius: var(--radius-full);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+
+  &.best {
+    color: #ffffff;
+    background: var(--gradient-primary);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  }
 }
 
 // Compatibility bar
@@ -426,6 +432,12 @@
 
   &.high-match {
     background: var(--gradient-success);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  }
+
+  &.med-match {
+    background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
   }
 
   &.low-match {

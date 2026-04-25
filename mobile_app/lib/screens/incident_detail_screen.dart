@@ -684,9 +684,12 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                             children: [
                               const Icon(Icons.timer, color: AppTheme.accentNeon),
                               const SizedBox(width: 8),
-                              Text(
-                                'Tiempo estimado de llegada: ~$estimatedArrival min',
-                                style: const TextStyle(color: AppTheme.accentNeon, fontWeight: FontWeight.bold, fontSize: 15),
+                              Flexible(
+                                child: Text(
+                                  'Tiempo estimado de llegada: ~$estimatedArrival min',
+                                  style: const TextStyle(color: AppTheme.accentNeon, fontWeight: FontWeight.bold, fontSize: 15),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ],
                           ),

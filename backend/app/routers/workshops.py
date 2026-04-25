@@ -15,6 +15,7 @@ from app.schemas.incident import (
 from app.services.incident_service import update_incident_status, _add_history
 from app.services.notification_service import notify_user
 from app.utils.security import get_current_workshop
+from app.utils.geolocation import haversine_distance, estimate_arrival_minutes
 
 router = APIRouter(prefix="/api/workshops", tags=["Talleres"])
 
@@ -189,6 +190,13 @@ async def accept_incident(
     incident.workshop_id = current_workshop.id
     if data.technician_id:
         incident.technician_id = data.technician_id
+
+    # Calcular y asignar el ETA
+    distance = haversine_distance(
+        incident.latitude, incident.longitude,
+        current_workshop.latitude, current_workshop.longitude
+    )
+    incident.estimated_arrival_minutes = estimate_arrival_minutes(distance)
 
     incident = await update_incident_status(
         db, incident, IncidentStatus.IN_PROGRESS,

@@ -94,8 +94,9 @@ async def create_incident(
     incident.ai_classification = ai_result.classification_details
     incident.audio_transcription = ai_result.audio_transcription
 
-    # 5. Asignación inteligente
+    # 5. Asignación inteligente (con retraso simulado para realismo y sinc de UI)
     db.flush()
+    await asyncio.sleep(4) # Simula a la IA procesando y permite que Flutter vea el estado "Pendiente"
     assignment = find_best_workshop(db, incident)
 
     if assignment:
@@ -109,6 +110,14 @@ async def create_incident(
             db, incident.id, IncidentStatus.ASSIGNED.value,
             f"Asignado a taller #{assignment.workshop_id}, ETA: {assignment.estimated_arrival_minutes} min",
             "sistema",
+        )
+
+        from app.services.notification_service import notify_user
+        await notify_user(
+            db, incident.user_id,
+            "🚀 ¡Taller asignado!",
+            f"La IA ha encontrado el mejor taller. El técnico llegará en aprox. {assignment.estimated_arrival_minutes} minutos.",
+            "incident_assigned",
         )
 
     db.commit()

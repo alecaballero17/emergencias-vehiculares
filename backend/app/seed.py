@@ -55,9 +55,9 @@ def seed():
             email="elrapido@example.com",
             password_hash=hash_password("taller123"),
             phone="+591 73456789",
-            address="Av. 6 de Agosto #1234, La Paz",
-            latitude=-16.5000,
-            longitude=-68.1500,
+            address="Av. Banzer y 3er Anillo, Santa Cruz",
+            latitude=-17.7650,
+            longitude=-63.1800,
             capacity=10,
             specialties=["Eléctrico", "Baterías", "Motor", "Mecánica", "Llantas", "Refrigeración"],
         )
@@ -66,9 +66,9 @@ def seed():
             email="lopez@example.com",
             password_hash=hash_password("taller123"),
             phone="+591 74567890",
-            address="Calle Comercio #567, La Paz",
-            latitude=-16.5100,
-            longitude=-68.1300,
+            address="Av. Santos Dumont, Santa Cruz",
+            latitude=-17.8000,
+            longitude=-63.1850,
             capacity=5,
             specialties=["Llantas", "Neumáticos", "Carrocería", "Colisión", "Cerrajería", "Llaves"],
         )
@@ -103,52 +103,52 @@ def seed():
                 "prio": IncidentPriority.MEDIUM,
                 "ai_class": "Sistema Eléctrico (Batería)",
                 "conf": 96.5,
-                "address": "Sopocachi, Calle Aspiazu",
-                "lat": -16.5120, "lon": -68.1280
+                "address": "Equipetrol, Calle 5",
+                "lat": -17.7650, "lon": -63.1950
             },
             {
                 "type": "crash", 
                 "desc": "Me chocaron por detrás en el semáforo. El maletero está hundido y el auto no avanza bien, parece que algo roza la llanta trasera.",
-                "transcrip": "Acabo de tener un accidente en la autopista. Un minibus me golpeó por detrás. Necesito grúa porque la llanta trasera izquierda está bloqueada por la carrocería.",
+                "transcrip": "Acabo de tener un accidente en la avenida. Un trufi me golpeó por detrás. Necesito grúa porque la llanta trasera izquierda está bloqueada.",
                 "ai_sum": "Choque por alcance severo con compromiso de tren de rodaje trasero. Requiere servicio de remolque y posterior trabajo de chapistería y chasis.",
                 "prio": IncidentPriority.CRITICAL,
                 "ai_class": "Colisión Estructural Alta Gravedad",
                 "conf": 98.2,
-                "address": "Autopista La Paz - El Alto, Km 2",
-                "lat": -16.4800, "lon": -68.1600
+                "address": "Doble Vía La Guardia, Km 4",
+                "lat": -17.8100, "lon": -63.2000
             },
             {
                 "type": "tire", 
                 "desc": "Caí en un bache gigante y la llanta se reventó. No tengo mi gata hidráulica para cambiarla por la de repuesto.",
-                "transcrip": "Hola, estoy en la Avenida Arce, pasé por un hueco que no vi por la lluvia y mi llanta delantera derecha explotó. El aro parece doblado también.",
+                "transcrip": "Hola, estoy en la Avenida San Martín, pasé por un hueco que no vi por la lluvia y mi llanta delantera derecha explotó. El aro parece doblado también.",
                 "ai_sum": "Reventón de neumático por impacto. Daño estructural posible en el aro/rin. Requiere asistencia en sitio para reemplazo por rueda de repuesto o grúa si el rin está inoperable.",
                 "prio": IncidentPriority.HIGH,
                 "ai_class": "Desperfecto Neumático",
                 "conf": 92.0,
-                "address": "Av. Arce, esquina Montevideo",
-                "lat": -16.5050, "lon": -68.1250
+                "address": "Av. San Martín, esquina 4to Anillo",
+                "lat": -17.7600, "lon": -63.1900
             },
             {
                 "type": "keys_locked", 
                 "desc": "Dejé las llaves puestas en el contacto y al cerrar la puerta saltó el seguro.",
-                "transcrip": "Estoy en el parqueo del supermercado. Bajé un segundo, cerré la puerta y me di cuenta que las llaves están adentro. El motor está apagado.",
+                "transcrip": "Estoy en el parqueo del supermercado Fidalga. Bajé un segundo, cerré la puerta y me di cuenta que las llaves están adentro. El motor está apagado.",
                 "ai_sum": "Confinamiento de llaves al interior del habitáculo. No hay riesgo humano inmediato. Requiere técnico cerrajero de emergencia.",
                 "prio": IncidentPriority.LOW,
                 "ai_class": "Cerrajería Automotriz",
                 "conf": 99.0,
-                "address": "Supermercado Ketal, Obrajes Calle 15",
-                "lat": -16.5250, "lon": -68.1120
+                "address": "Supermercado Fidalga, Urubó",
+                "lat": -17.7500, "lon": -63.2100
             },
             {
                 "type": "overheating",
                 "desc": "Humo blanco intenso sale del capó, temperatura al máximo.",
-                "transcrip": "Iba subiendo y empezó a oler a dulce, de repente salió mucho vapor blanco. Me detuve inmediatamente.",
+                "transcrip": "Iba manejando y empezó a oler a dulce, de repente salió mucho vapor blanco. Me detuve inmediatamente.",
                 "ai_sum": "Fuga crítica de refrigerante / sobrecalentamiento. El olor a refrigerante evaporado sugiere manguera rota o falla severa del radiador. NO encender motor.",
                 "prio": IncidentPriority.CRITICAL,
                 "ai_class": "Fallo Sistema Refrigeración",
                 "conf": 95.5,
-                "address": "Subida a Ciudad Satélite, El Alto",
-                "lat": -16.5300, "lon": -68.1700
+                "address": "Plan 3000, Rotonda",
+                "lat": -17.8300, "lon": -63.1400
             },
             {
                 "type": "engine",
@@ -158,8 +158,8 @@ def seed():
                 "prio": IncidentPriority.HIGH,
                 "ai_class": "Mecánica de Motor",
                 "conf": 91.2,
-                "address": "Avenida Costanera, Zona Sur",
-                "lat": -16.5400, "lon": -68.0900
+                "address": "Av. Roca y Coronado, 2do Anillo",
+                "lat": -17.7900, "lon": -63.2000
             }
         ]
 

@@ -55,21 +55,32 @@ class _HomeScreenState extends State<HomeScreen> {
       final last = incidents.first;
       final status = last['status'].toString().toLowerCase();
       
-      // Si el estado cambió, enviar notificación
-      if (_lastKnownStatus != null && _lastKnownStatus != status) {
-        if ((status == 'assigned' || status == 'in_progress') && 
-            (_lastKnownStatus != 'assigned' && _lastKnownStatus != 'in_progress')) {
+      // Si el estado cambió (o es el primer incidente asignado en una cuenta nueva)
+      bool isFirstAssignment = (_lastKnownStatus == null && (status == 'assigned' || status == 'in_progress'));
+      bool isStatusChange = (_lastKnownStatus != null && _lastKnownStatus != status);
+
+      if (isFirstAssignment || isStatusChange) {
+        final int uniqueNotifId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+        if (status == 'assigned') {
           final eta = last['estimated_arrival_minutes'];
           final etaText = eta != null ? ' Tiempo estimado: $eta minutos.' : '';
           _notificationService.showNotification(
-            id: 1, 
+            id: uniqueNotifId, 
             title: '¡Taller Asignado! 🔧', 
-            body: 'Un taller ha aceptado tu emergencia y el técnico va en camino.$etaText'
+            body: 'Un taller ha aceptado tu emergencia.$etaText'
           );
-          _showInAppNotification('¡Taller Asignado! 🔧', 'El técnico va en camino.$etaText', Colors.blue);
+          _showInAppNotification('¡Taller Asignado! 🔧', 'Un taller ha aceptado tu emergencia.$etaText', Colors.blue);
+        } else if (status == 'in_progress') {
+          _notificationService.showNotification(
+            id: uniqueNotifId + 1, 
+            title: '¡Técnico en camino! 🚗', 
+            body: 'El taller ha despachado al mecánico. ¡Pronto estará contigo!'
+          );
+          _showInAppNotification('¡Técnico en camino! 🚗', 'El taller ha despachado al mecánico.', Colors.orange);
         } else if (status == 'completed') {
           _notificationService.showNotification(
-            id: 2, 
+            id: uniqueNotifId + 2, 
             title: '¡Servicio Finalizado! ✅', 
             body: 'El taller ha completado el servicio. Por favor realiza el pago.'
           );
@@ -114,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     final vehicles = await _vehicleService.getMyVehicles();
-    await _pollActiveIncident(); // Carga inicial del incidente
+    await _pollActiveIncident(); // Carga inicial
     
     if (mounted) {
       setState(() {

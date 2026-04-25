@@ -68,7 +68,7 @@ RESPONDE EXCLUSIVAMENTE EN JSON VÁLIDO (sin bloques de código markdown):
     "incident_type": "battery|tire|crash|engine|overheating|keys_lost|keys_locked|other",
     "priority": "low|medium|high|critical",
     "confidence": 0.0-1.0,
-    "transcription": "Transcripción clara y literal del audio (si hay audio adjunto, si no pon 'Sin audio')",
+    "transcription": "Transcripción clara y literal del audio SIN incluir marcas de tiempo o números (si hay audio, si no pon 'Sin audio')",
     "summary": "🚨 SITUACIÓN: (1 oración)\\n🛠️ DIAGNÓSTICO: (2-3 puntos clave)\\n🧰 RECOMENDACIÓN: (Herramientas/acciones necesarias)",
     "details": "Breve explicación técnica de tu razonamiento"
 }}

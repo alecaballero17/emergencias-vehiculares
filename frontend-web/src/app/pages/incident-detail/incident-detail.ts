@@ -40,14 +40,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   // Mapeo de tipo de incidente → especialidades relevantes
   private readonly typeSpecialtyMap: Record<string, string[]> = {
-    battery: ['baterías', 'eléctrico', 'electricidad', 'batería'],
-    tire: ['llantas', 'neumáticos', 'llanta', 'neumático'],
-    crash: ['carrocería', 'chasis', 'colisión', 'remolque'],
-    engine: ['motor', 'mecánica', 'mecánico', 'general'],
-    keys_lost: ['cerrajería', 'llaves', 'cerrajero'],
-    keys_locked: ['cerrajería', 'llaves', 'cerrajero'],
-    overheating: ['motor', 'radiador', 'refrigeración', 'mecánica'],
-    other: ['general', 'mecánica']
+    battery: ['baterías', 'eléctrico', 'electricidad', 'batería', 'corriente', 'alternador'],
+    tire: ['llantas', 'neumáticos', 'llanta', 'neumático', 'pinchazo', 'auxilio', 'gomería'],
+    crash: ['carrocería', 'chasis', 'colisión', 'remolque', 'chapería', 'pintura'],
+    engine: ['motor', 'mecánica', 'mecánico', 'general', 'frenos', 'suspensión'],
+    keys_lost: ['cerrajería', 'llaves', 'cerrajero', 'chapa'],
+    keys_locked: ['cerrajería', 'llaves', 'cerrajero', 'apertura'],
+    overheating: ['motor', 'radiador', 'refrigeración', 'mecánica', 'agua', 'ventilador'],
+    other: ['general', 'mecánica', 'auxilio']
   };
 
   constructor(
@@ -188,17 +188,37 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   /** Score 0-100 for how well a technician matches the incident type */
   getMatchScore(tech: Technician): number {
-    if (!this.incident || !tech.specialties || tech.specialties.length === 0) return 0;
+    if (!this.incident || !tech.specialties || tech.specialties.length === 0) return 10; // Base 10% for any professional
+    
     const relevant = this.typeSpecialtyMap[this.incident.incident_type] || [];
     if (relevant.length === 0) return 50;
+
     const techSpecs = tech.specialties.map(s => s.toLowerCase().trim());
-    const matchCount = relevant.filter(r => techSpecs.some(ts => ts.includes(r) || r.includes(ts))).length;
-    return Math.round((matchCount / relevant.length) * 100);
+    
+    // Fuzzy matching: check if any tech specialty contains or is contained by a relevant keyword
+    const matchedRelevant = relevant.filter(r => 
+      techSpecs.some(ts => ts.includes(r) || r.includes(ts))
+    );
+
+    if (matchedRelevant.length === 0) return 15; // Base 15% if no direct match but has specialties
+
+    // Calculation: 40% base for any match + proportional part
+    const score = 40 + (matchedRelevant.length / relevant.length) * 60;
+    return Math.min(Math.round(score), 100);
   }
 
   /** Check if technician is a recommended match */
   isRecommended(tech: Technician): boolean {
-    return this.getMatchScore(tech) >= 50;
+    const score = this.getMatchScore(tech);
+    return score >= 60;
+  }
+
+  /** Check if this technician is the absolute best match in the list */
+  isBestMatch(tech: Technician): boolean {
+    if (this.technicians.length === 0) return false;
+    const scores = this.technicians.map(t => this.getMatchScore(t));
+    const maxScore = Math.max(...scores);
+    return maxScore > 20 && this.getMatchScore(tech) === maxScore;
   }
 
   // === Acciones ===
