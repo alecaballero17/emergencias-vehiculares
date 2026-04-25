@@ -26,7 +26,7 @@ class VehicleService {
       }
       return [];
     } catch (e) {
-      print('Error obteniendo vehículos: $e');
+      // debugPrint('Error obteniendo vehículos: $e');
       return [];
     }
   }
@@ -44,7 +44,7 @@ class VehicleService {
       );
       return response.statusCode == 201;
     } catch (e) {
-      print('Error registrando vehículo: $e');
+      // debugPrint('Error registrando vehículo: $e');
       return false;
     }
   }
@@ -62,7 +62,7 @@ class VehicleService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('Error actualizando vehículo: $e');
+      // debugPrint('Error actualizando vehículo: $e');
       return false;
     }
   }
@@ -79,7 +79,7 @@ class VehicleService {
       );
       return response.statusCode == 204;
     } catch (e) {
-      print('Error eliminando vehículo: $e');
+      // debugPrint('Error eliminando vehículo: $e');
       return false;
     }
   }

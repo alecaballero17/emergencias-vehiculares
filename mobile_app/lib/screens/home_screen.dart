@@ -63,21 +63,21 @@ class _HomeScreenState extends State<HomeScreen> {
         final int uniqueNotifId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
         if (status == 'assigned') {
-          final eta = last['estimated_arrival_minutes'];
-          final etaText = eta != null ? ' Tiempo estimado: $eta minutos.' : '';
           _notificationService.showNotification(
             id: uniqueNotifId, 
             title: '¡Taller Asignado! 🔧', 
-            body: 'Un taller ha aceptado tu emergencia.$etaText'
+            body: 'Un taller ha aceptado tu emergencia. Pronto despacharán a un técnico.'
           );
-          _showInAppNotification('¡Taller Asignado! 🔧', 'Un taller ha aceptado tu emergencia.$etaText', Colors.blue);
+          _showInAppNotification('¡Taller Asignado! 🔧', 'Un taller ha aceptado tu emergencia.', Colors.blue);
         } else if (status == 'in_progress') {
+          final eta = last['estimated_arrival_minutes'];
+          final etaText = eta != null ? ' Tiempo estimado: $eta minutos.' : '';
           _notificationService.showNotification(
             id: uniqueNotifId + 1, 
             title: '¡Técnico en camino! 🚗', 
-            body: 'El taller ha despachado al mecánico. ¡Pronto estará contigo!'
+            body: 'El taller ha despachado al mecánico. ¡Pronto estará contigo!$etaText'
           );
-          _showInAppNotification('¡Técnico en camino! 🚗', 'El taller ha despachado al mecánico.', Colors.orange);
+          _showInAppNotification('¡Técnico en camino! 🚗', 'El mecánico va en camino.$etaText', Colors.orange);
         } else if (status == 'completed') {
           _notificationService.showNotification(
             id: uniqueNotifId + 2, 

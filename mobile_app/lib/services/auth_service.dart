@@ -23,7 +23,7 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      print('Error en login: $e');
+      // debugPrint('Error en login: $e');
       return null;
     }
   }
@@ -51,7 +51,7 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      print('Error en registro: $e');
+      // debugPrint('Error en registro: $e');
       return null;
     }
   }
@@ -71,7 +71,7 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      print('Error obteniendo perfil: $e');
+      // debugPrint('Error obteniendo perfil: $e');
       return null;
     }
   }

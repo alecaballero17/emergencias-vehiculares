@@ -108,7 +108,7 @@ class IncidentService {
       );
       return response.data;
     } catch (e) {
-      print('Error obteniendo detalle: $e');
+      // debugPrint('Error obteniendo detalle: $e');
       return null;
     }
   }
@@ -125,7 +125,7 @@ class IncidentService {
       );
       return response.data;
     } catch (e) {
-      print('Error obteniendo historial: $e');
+      // debugPrint('Error obteniendo historial: $e');
       return [];
     }
   }
@@ -142,7 +142,7 @@ class IncidentService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('Error cancelando incidente: $e');
+      // debugPrint('Error cancelando incidente: $e');
       return false;
     }
   }
