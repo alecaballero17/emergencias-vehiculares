@@ -79,8 +79,14 @@ def seed_demo():
             specialties=["Motor", "Mecánica General"], 
             is_available=True
         )
+        tech4 = Technician(
+            workshop_id=w.id,
+            name="Roberto Gómez",
+            specialties=["CHAPA_PINTURA"],
+            is_available=True
+        )
         
-        db.add_all([tech1, tech2, tech3])
+        db.add_all([tech1, tech2, tech3, tech4])
         db.commit()
         
         print("\n--- ¡Demo preparada con éxito! ---")
