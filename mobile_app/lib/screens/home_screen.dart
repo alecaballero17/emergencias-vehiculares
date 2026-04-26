@@ -12,6 +12,8 @@ import 'incident_detail_screen.dart';
 import 'incident_history_screen.dart';
 import 'profile_screen.dart';
 import 'vehicle_form_screen.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -29,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Vehicle> _vehicles = [];
   Vehicle? _selectedVehicle;
   Map<String, dynamic>? _activeIncident;
+  User? _userProfile;
   String? _lastKnownStatus;
   bool _isLoading = true;
   Timer? _globalPollingTimer;
@@ -124,12 +127,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
+    final authService = AuthService();
     final vehicles = await _vehicleService.getMyVehicles();
+    final profile = await authService.getProfile();
     await _pollActiveIncident(); // Carga inicial
     
     if (mounted) {
       setState(() {
         _vehicles = vehicles;
+        _userProfile = profile;
         if (vehicles.isNotEmpty && _selectedVehicle == null) _selectedVehicle = vehicles.first;
         _isLoading = false;
       });
@@ -180,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         FadeInDown(
                           child: Text(
-                            '¡Hola, Carlos!',
+                            '¡Hola, ${_userProfile?.fullName ?? 'Usuario'}!',
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
