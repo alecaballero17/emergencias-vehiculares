@@ -1,5 +1,5 @@
 # 🚗 Emergencias Vehiculares AI
-### *Asistencia inteligente en ruta, impulsada por Inteligencia Artificial Multimodal*
+### *Plataforma Inteligente de Asistencia en Ruta con IA Multimodal*
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/alecaballero17/emergencias-vehiculares?style=flat-square&color=FF5F6D)
 ![GitHub repo size](https://img.shields.io/github/repo-size/alecaballero17/emergencias-vehiculares?style=flat-square&color=00D2FF)
@@ -7,56 +7,98 @@
 
 ---
 
-## 🌟 Descripción del Proyecto
-**Emergencias Vehiculares AI** es una plataforma integral diseñada para optimizar la respuesta ante incidentes en carretera. Utilizando **Google Gemini 1.5**, el sistema analiza automáticamente fotos y audios enviados por los conductores para diagnosticar daños, asignar prioridades y conectar de forma inteligente con el técnico más capacitado de un taller cercano.
+## 🌟 Visión General
+**Emergencias Vehiculares AI** no es solo una aplicación de auxilio mecánico; es un ecosistema digital completo que utiliza **Inteligencia Artificial Multimodal (Google Gemini 1.5)** para transformar la gestión de incidentes viales. 
+
+El sistema permite a los conductores reportar emergencias mediante fotos y audios, los cuales son analizados en tiempo real para determinar el daño, la prioridad y asignar automáticamente al técnico especialista más adecuado del taller más cercano.
+
+---
+
+## 📐 Arquitectura del Sistema
+
+El proyecto está estructurado como un **Monorepo**, garantizando la cohesión entre los servicios:
+
+```mermaid
+graph TD
+    A[App Móvil - Flutter] -->|SOS: Audio/Foto| B(Backend API - FastAPI)
+    B -->|Procesamiento Multimodal| C{Google Gemini 1.5}
+    C -->|Diagnóstico/Prioridad| B
+    B -->|Notificación Push| D[Panel Web - Angular]
+    B <-->|Persistencia| E[(PostgreSQL)]
+    D -->|Asignación Técnico| B
+```
+
+### Estructura de Carpetas:
+*   📂 **`backend/`**: Núcleo del sistema. API REST construida con FastAPI, SQLAlchemy y Alembic.
+*   📂 **`frontend-web/`**: Panel administrativo para talleres desarrollado en Angular 18 con un diseño premium dark.
+*   📂 **`mobile_app/`**: Aplicación nativa para conductores (Android/iOS) desarrollada en Flutter.
+*   📂 **`docs/`**: Documentación técnica, diagramas de secuencia y casos de uso.
+
+---
+
+## 🧠 Inteligencia Artificial y Lógica de Negocio
+
+### Procesamiento de Emergencias
+1.  **Análisis Multimodal:** El backend recibe evidencia (imagen del choque + audio del conductor).
+2.  **Inferencia Gemini:** La IA identifica el tipo de problema (motor, llantas, eléctrico, choque).
+3.  **Match Inteligente:** El sistema filtra los técnicos del taller y calcula un **% de Match** basado en la especialidad del técnico vs. el diagnóstico de la IA.
+
+### Modelo de Monetización
+*   **Comisión Automática:** El sistema calcula automáticamente una comisión del **10%** por cada servicio finalizado.
+*   **Gestión de Finanzas:** El taller puede visualizar sus ingresos brutos, la comisión de la plataforma y el saldo neto en tiempo real.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Componente | Tecnología | Descripción |
-| :--- | :--- | :--- |
-| **Backend** | ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) | API REST de alto rendimiento con Python 3.12. |
-| **Frontend Web** | ![Angular](https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular) | Panel administrativo para talleres (v18). |
-| **App Móvil** | ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter) | Aplicación multiplataforma para conductores. |
-| **IA** | ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=google-gemini) | Procesamiento Multimodal (Imagen/Audio/Texto). |
-| **Base de Datos** | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql) | Almacenamiento persistente y relacional. |
-| **Despliegue** | ![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render) | Infraestructura Cloud para API y Web. |
-
----
-
-## ✨ Características Principales
-
-*   🤖 **Análisis Multimodal con IA:** Diagnóstico instantáneo de incidentes mediante fotos y audios.
-*   🧠 **Match Inteligente:** Algoritmo que asigna técnicos basándose en su especialidad y el tipo de daño detectado.
-*   📍 **Geolocalización en Tiempo Real:** Seguimiento de emergencias mediante integración con Google Maps.
-*   🔔 **Notificaciones Push:** Alertas instantáneas para talleres y conductores sobre el estado del servicio.
-*   📊 **Dashboard Administrativo:** Gestión completa de técnicos, inventarios y finanzas del taller.
-
----
-
-## 🔗 Acceso al Sistema
-
-| Servicio | Enlace |
+| Componente | Tecnología |
 | :--- | :--- |
-| **🌐 Panel Web (Talleres)** | [https://emergencias-web.onrender.com](https://emergencias-web.onrender.com) |
-| **⚙️ Backend API (Docs)** | [https://emergencias-api.onrender.com/docs](https://emergencias-api.onrender.com/docs) |
-| **📱 App Móvil** | *Descargar APK desde el repositorio* |
+| **Backend** | Python 3.12, FastAPI, PostgreSQL, JWT, SQLAlchemy. |
+| **Frontend Web** | Angular 18, RxJS, TailwindCSS/SCSS, Animate.css. |
+| **App Móvil** | Flutter 3.x, Google Maps API, Local Notifications. |
+| **IA** | Google Gemini 1.5 Pro/Flash (Google AI Studio). |
 
 ---
 
-## 🔑 Credenciales de Prueba
+## 🔗 Acceso al Sistema (Cloud)
 
-### 📱 Aplicación Móvil (Cliente)
-*   **Usuario:** `carlos@example.com`
-*   **Contraseña:** `password123`
+*   **🌐 Panel Web:** [https://emergencias-web.onrender.com](https://emergencias-web.onrender.com)
+*   **⚙️ Backend API (Swagger):** [https://emergencias-api.onrender.com/docs](https://emergencias-api.onrender.com/docs)
 
-### 💻 Panel Web (Administrador de Taller)
-*   **Taller:** Taller El Rápido
-*   **Usuario:** `elrapido@example.com`
-*   **Contraseña:** `taller123`
+### 🔑 Credenciales de Prueba
+| Usuario | Email | Password | Rol |
+| :--- | :--- | :--- | :--- |
+| **Cliente** | `carlos@example.com` | `password123` | Conductor |
+| **Taller** | `elrapido@example.com` | `taller123` | Administrador Taller |
+
+---
+
+## 🚀 Instalación Local
+
+### Backend:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # o venv\Scripts\activate en Windows
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Frontend Web:
+```bash
+cd frontend-web
+npm install
+ng serve
+```
+
+### App Móvil:
+```bash
+cd mobile_app
+flutter pub get
+flutter run
+```
 
 ---
 
 ## 👨‍💻 Autores
-*   **Alejandro Caballero** - *Desarrollo e Integración*
+*   **Alejandro Caballero** - *Arquitectura y Desarrollo*
