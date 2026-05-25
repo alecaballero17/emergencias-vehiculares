@@ -1,26 +1,32 @@
-"""Router de incidentes: creación, consulta y actualización de emergencias."""
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+"""Router de incidentes: creación, consulta, cancelación con recargo."""
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 from app.database import get_db
 from app.models.user import User
 from app.models.incident import Incident
-from app.models.enums import IncidentStatus
+from app.models.payment import Payment
+from app.models.enums import IncidentStatus, PaymentStatus
 from app.schemas.incident import IncidentCreate, IncidentResponse, IncidentDetail, IncidentUpdate
 from app.services.incident_service import create_incident, update_incident_status
 from app.services.notification_service import notify_workshop, notify_user
+from app.services.state_machine import requires_cancellation_fee, DEFAULT_CANCELLATION_FEE, transition_state
+from app.services.websocket_manager import ws_manager
 from app.utils.security import get_current_user
+from app.middleware.tenant_middleware import get_tenant_id
 
 router = APIRouter(prefix="/api/incidents", tags=["Incidentes"])
 
 
 @router.post("/", response_model=IncidentResponse, status_code=201)
 async def report_incident(
+    request: Request,
     latitude: float = Form(...),
     longitude: float = Form(...),
     vehicle_id: Optional[int] = Form(None),
     address: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    local_uuid: Optional[str] = Form(None),
     images: list[UploadFile] = File(default=[]),
     audio: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
@@ -29,32 +35,27 @@ async def report_incident(
     """
     Reportar una nueva emergencia vehicular.
     Acepta datos multimodales: texto, imágenes, audio y ubicación.
-    El sistema procesará automáticamente con IA y asignará un taller.
+    Soporta local_uuid para idempotencia (sincronización offline).
     """
+    tenant_id = current_user.tenant_id
+
     incident_data = IncidentCreate(
         vehicle_id=vehicle_id,
         latitude=latitude,
         longitude=longitude,
         address=address,
         description=description,
+        local_uuid=local_uuid,
     )
 
     incident = await create_incident(
         db=db,
         user_id=current_user.id,
+        tenant_id=tenant_id,
         incident_data=incident_data,
         images=images if images else None,
         audio=audio,
     )
-
-    # Notificar al taller asignado
-    if incident.workshop_id:
-        await notify_workshop(
-            db, incident.workshop_id,
-            "🚨 Nueva emergencia asignada",
-            f"Incidente #{incident.id}: {incident.incident_type.value} - Prioridad {incident.priority.value}",
-            "incident_new",
-        )
 
     return incident
 
@@ -65,8 +66,11 @@ def list_my_incidents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Listar incidentes del usuario actual."""
-    query = db.query(Incident).filter(Incident.user_id == current_user.id)
+    """Listar incidentes del usuario actual (filtrado por tenant)."""
+    query = db.query(Incident).filter(
+        Incident.user_id == current_user.id,
+        Incident.tenant_id == current_user.tenant_id,
+    )
     if status:
         query = query.filter(Incident.status == status)
     return query.order_by(Incident.created_at.desc()).all()
@@ -78,15 +82,20 @@ def get_incident_detail(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Obtener detalle completo de un incidente con evidencias e historial."""
+    """Obtener detalle completo de un incidente con evidencias, historial y cotizaciones."""
     incident = (
         db.query(Incident)
         .options(
             joinedload(Incident.evidences),
             joinedload(Incident.status_history),
             joinedload(Incident.payment),
+            joinedload(Incident.quotations),
         )
-        .filter(Incident.id == incident_id, Incident.user_id == current_user.id)
+        .filter(
+            Incident.id == incident_id,
+            Incident.user_id == current_user.id,
+            Incident.tenant_id == current_user.tenant_id,
+        )
         .first()
     )
     if not incident:
@@ -100,25 +109,59 @@ async def cancel_incident(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Cancelar un incidente (solo si está pendiente o asignado)."""
+    """
+    Cancelar un incidente.
+    Si el estado es 'en_camino' o 'en_atencion', se aplica recargo de reconocimiento.
+    """
     incident = db.query(Incident).filter(
         Incident.id == incident_id,
         Incident.user_id == current_user.id,
+        Incident.tenant_id == current_user.tenant_id,
     ).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado")
 
-    if incident.status not in [IncidentStatus.PENDING, IncidentStatus.ASSIGNED]:
-        raise HTTPException(status_code=400, detail="No se puede cancelar un incidente en este estado")
+    # Verificar si requiere recargo
+    needs_fee = requires_cancellation_fee(incident.status)
+    fee = DEFAULT_CANCELLATION_FEE if needs_fee else None
 
-    incident = await update_incident_status(db, incident, IncidentStatus.CANCELLED, "Cancelado por el usuario", "usuario")
+    try:
+        ws_payload = transition_state(incident, IncidentStatus.CANCELLED, cancellation_fee=fee)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Si hay recargo, crear el pago obligatorio
+    if needs_fee and fee:
+        payment = Payment(
+            tenant_id=current_user.tenant_id,
+            incident_id=incident.id,
+            amount=fee,
+            commission_amount=0,
+            commission_percent=0,
+            cancellation_fee=fee,
+            payment_status=PaymentStatus.PENDING,
+        )
+        db.add(payment)
+
+    from app.services.incident_service import _add_history
+    notes = f"Cancelado por el usuario"
+    if needs_fee:
+        notes += f" (recargo de reconocimiento: Bs. {fee})"
+    _add_history(db, incident.id, current_user.tenant_id, IncidentStatus.CANCELLED.value, notes, "usuario")
+
+    db.commit()
+    db.refresh(incident)
+
+    # Emitir por WebSocket
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
 
     if incident.workshop_id:
         await notify_workshop(
             db, incident.workshop_id,
             "❌ Incidente cancelado",
-            f"El incidente #{incident.id} fue cancelado por el usuario",
+            f"El incidente #{incident.id} fue cancelado por el usuario" + (f". Recargo aplicado: Bs. {fee}" if fee else ""),
             "incident_cancelled",
+            tenant_id=current_user.tenant_id,
         )
 
     return incident

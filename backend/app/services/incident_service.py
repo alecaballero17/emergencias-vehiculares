@@ -1,6 +1,7 @@
 """
 Servicio de gestión de incidentes.
-Orquesta el flujo completo: creación, procesamiento IA, asignación y actualización.
+Orquesta: creación, procesamiento IA, alertas WebSocket por especialidad/geolocalización,
+máquina de estados, y sincronización offline.
 """
 import os
 import uuid
@@ -16,30 +17,42 @@ from app.models.service_history import ServiceHistory
 from app.models.vehicle import Vehicle
 from app.models.enums import IncidentStatus, EvidenceType, IncidentType
 from app.schemas.incident import IncidentCreate, AIAnalysisResult
-import asyncio
 from app.ai.multimodal_processor import process_multimodal_incident
-from app.services.assignment_service import find_best_workshop
+from app.services.assignment_service import find_nearby_workshops_by_specialty
+from app.services.state_machine import transition_state, STATUS_LABELS, STATUS_EMOJIS
+from app.services.websocket_manager import ws_manager
 from app.utils.geolocation import format_address, get_reverse_geocoding
 
 settings = get_settings()
+BOL_TZ = pytz.timezone('America/La_Paz')
 
 
 async def create_incident(
     db: Session,
     user_id: int,
+    tenant_id: int,
     incident_data: IncidentCreate,
     images: list[UploadFile] | None = None,
     audio: UploadFile | None = None,
 ) -> Incident:
-    """Crea un incidente, procesa evidencias con IA y asigna taller."""
+    """Crea un incidente, procesa con IA, y envía alertas WebSocket a talleres relevantes."""
 
-    # 1. Crear incidente base y obtener dirección legible
+    # Idempotencia: si viene un local_uuid, verificar que no exista ya
+    if incident_data.local_uuid:
+        existing = db.query(Incident).filter(
+            Incident.local_uuid == incident_data.local_uuid
+        ).first()
+        if existing:
+            return existing  # Ya fue sincronizado previamente
+
+    # 1. Obtener dirección legible
     human_address = incident_data.address
     if not human_address:
-        print(f"[Sistema] Obteniendo dirección legible para {incident_data.latitude}, {incident_data.longitude}...")
         human_address = await get_reverse_geocoding(incident_data.latitude, incident_data.longitude)
 
+    # 2. Crear incidente en estado PENDING
     incident = Incident(
+        tenant_id=tenant_id,
         user_id=user_id,
         vehicle_id=incident_data.vehicle_id,
         latitude=incident_data.latitude,
@@ -47,31 +60,34 @@ async def create_incident(
         address=human_address or incident_data.address,
         description=incident_data.description,
         status=IncidentStatus.PENDING,
+        local_uuid=incident_data.local_uuid,
     )
     db.add(incident)
     db.flush()
 
-    # Registrar en historial
-    _add_history(db, incident.id, IncidentStatus.PENDING.value, "Incidente creado", "sistema")
+    _add_history(db, incident.id, tenant_id, IncidentStatus.PENDING.value, "Incidente creado", "sistema")
 
-    # 2. Guardar evidencias y preparar rutas
+    # 3. Guardar evidencias
     audio_path = None
     if audio:
         audio_path = await _save_upload(audio, "audio")
-        db.add(Evidence(incident_id=incident.id, evidence_type=EvidenceType.AUDIO, file_url=audio_path))
-    
+        db.add(Evidence(tenant_id=tenant_id, incident_id=incident.id, evidence_type=EvidenceType.AUDIO, file_url=audio_path))
+
     image_paths = []
     if images:
         for img_file in images:
             img_path = await _save_upload(img_file, "images")
-            db.add(Evidence(incident_id=incident.id, evidence_type=EvidenceType.IMAGE, file_url=img_path))
+            db.add(Evidence(tenant_id=tenant_id, incident_id=incident.id, evidence_type=EvidenceType.IMAGE, file_url=img_path))
             image_paths.append(img_path)
 
     if incident_data.description:
-        db.add(Evidence(incident_id=incident.id, evidence_type=EvidenceType.TEXT, content=incident_data.description))
+        db.add(Evidence(tenant_id=tenant_id, incident_id=incident.id, evidence_type=EvidenceType.TEXT, content=incident_data.description))
 
-    # 3. PROCESAMIENTO MAESTRO MULTIMODAL UNIFICADO
-    # Obtenemos info del vehículo para contexto
+    # 4. Transicionar a SEARCHING (buscando_taller)
+    ws_payload = transition_state(incident, IncidentStatus.SEARCHING)
+    _add_history(db, incident.id, tenant_id, IncidentStatus.SEARCHING.value, "Buscando talleres cercanos", "sistema")
+
+    # 5. Procesamiento IA multimodal
     vehicle_info = None
     if incident_data.vehicle_id:
         vehicle = db.query(Vehicle).filter(Vehicle.id == incident_data.vehicle_id).first()
@@ -86,42 +102,45 @@ async def create_incident(
         location_address=incident.address
     )
 
-    # 4. Actualizar incidente con resultados unificados
+    # 6. Actualizar incidente con resultados IA
     incident.incident_type = ai_result.incident_type
     incident.priority = ai_result.priority
     incident.ai_confidence = ai_result.confidence
     incident.ai_summary = ai_result.summary
     incident.ai_classification = ai_result.classification_details
     incident.audio_transcription = ai_result.audio_transcription
+    if ai_result.cost_estimate_min:
+        incident.ai_cost_estimate_min = ai_result.cost_estimate_min
+    if ai_result.cost_estimate_max:
+        incident.ai_cost_estimate_max = ai_result.cost_estimate_max
 
-    # 5. Asignación inteligente (con retraso simulado para realismo y sinc de UI)
     db.flush()
-    await asyncio.sleep(4) # Simula a la IA procesando y permite que Flutter vea el estado "Pendiente"
-    assignment = find_best_workshop(db, incident)
 
-    if assignment:
-        incident.workshop_id = assignment.workshop_id
-        incident.technician_id = assignment.technician_id
-        incident.estimated_arrival_minutes = assignment.estimated_arrival_minutes
-        incident.status = IncidentStatus.ASSIGNED
-        incident.assigned_at = datetime.now(pytz.timezone('America/La_Paz'))
-
-        _add_history(
-            db, incident.id, IncidentStatus.ASSIGNED.value,
-            f"Asignado a taller #{assignment.workshop_id}, ETA: {assignment.estimated_arrival_minutes} min",
-            "sistema",
-        )
-
-        from app.services.notification_service import notify_user
-        await notify_user(
-            db, incident.user_id,
-            "🚀 ¡Taller asignado!",
-            f"La IA ha encontrado el mejor taller. El técnico llegará en aprox. {assignment.estimated_arrival_minutes} minutos.",
-            "incident_assigned",
-        )
+    # 7. Enviar alertas WebSocket a talleres del MISMO tenant, filtrados por geolocalización y especialidad
+    candidates = find_nearby_workshops_by_specialty(db, incident, tenant_id)
+    if candidates:
+        workshop_ids = [c.workshop_id for c in candidates]
+        alert_payload = {
+            "type": "new_incident_alert",
+            "incident_id": incident.id,
+            "incident_type": incident.incident_type.value,
+            "priority": incident.priority.value,
+            "latitude": incident.latitude,
+            "longitude": incident.longitude,
+            "address": incident.address,
+            "description": incident.description,
+            "ai_summary": incident.ai_summary,
+            "cost_estimate_min": incident.ai_cost_estimate_min,
+            "cost_estimate_max": incident.ai_cost_estimate_max,
+        }
+        await ws_manager.broadcast_to_workshops(workshop_ids, alert_payload)
 
     db.commit()
     db.refresh(incident)
+
+    # Suscribir al usuario al incidente por WebSocket
+    ws_manager.subscribe_to_incident("user", user_id, incident.id)
+
     return incident
 
 
@@ -132,16 +151,17 @@ async def update_incident_status(
     notes: str | None = None,
     updated_by: str = "sistema",
 ) -> Incident:
-    """Actualiza el estado de un incidente."""
-    incident.status = new_status
+    """Actualiza el estado con la máquina de estados y emite WebSocket."""
+    ws_payload = transition_state(incident, new_status)
 
-    if new_status == IncidentStatus.COMPLETED:
-        incident.completed_at = datetime.now(pytz.timezone('America/La_Paz'))
-
-    _add_history(db, incident.id, new_status.value, notes, updated_by)
+    _add_history(db, incident.id, incident.tenant_id, new_status.value, notes, updated_by)
 
     db.commit()
     db.refresh(incident)
+
+    # Emitir cambio de estado a todos los suscritos al incidente
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
+
     return incident
 
 
@@ -160,9 +180,10 @@ async def _save_upload(file: UploadFile, subfolder: str) -> str:
     return file_path
 
 
-def _add_history(db: Session, incident_id: int, status: str, notes: str | None, created_by: str):
+def _add_history(db: Session, incident_id: int, tenant_id: int, status: str, notes: str | None, created_by: str):
     """Agrega un registro al historial de servicio."""
     history = ServiceHistory(
+        tenant_id=tenant_id,
         incident_id=incident_id,
         status=status,
         notes=notes,

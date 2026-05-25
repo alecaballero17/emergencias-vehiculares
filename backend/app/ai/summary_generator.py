@@ -13,9 +13,6 @@ TYPE_LABELS = {
     IncidentType.TIRE: "Pinchazo / Llanta dañada",
     IncidentType.CRASH: "Accidente / Choque",
     IncidentType.ENGINE: "Falla de motor",
-    IncidentType.OVERHEATING: "Sobrecalentamiento",
-    IncidentType.KEYS_LOST: "Llave perdida",
-    IncidentType.KEYS_LOCKED: "Llave dentro del vehículo",
     IncidentType.OTHER: "Otro problema",
 }
 
@@ -144,10 +141,7 @@ def _get_recommendations(incident_type: IncidentType) -> str:
         IncidentType.BATTERY: "Llevar cables de arranque o batería de respaldo. Verificar alternador.",
         IncidentType.TIRE: "Llevar llanta de repuesto, gato hidráulico y herramientas. Verificar kit de parches.",
         IncidentType.CRASH: "Evaluar daño estructural. Verificar si el vehículo puede moverse. Considerar grúa.",
-        IncidentType.ENGINE: "Llevar herramientas de diagnóstico OBD. Verificar niveles de fluidos.",
-        IncidentType.OVERHEATING: "Llevar refrigerante y herramientas. No abrir radiador caliente.",
-        IncidentType.KEYS_LOST: "Llevar equipo de cerrajería automotriz. Verificar tipo de llave.",
-        IncidentType.KEYS_LOCKED: "Llevar kit de apertura vehicular. Verificar modelo del vehículo.",
-        IncidentType.OTHER: "Llevar kit básico de herramientas. Evaluar la situación al llegar.",
+        IncidentType.ENGINE: "Llevar herramientas de diagnóstico OBD. Verificar niveles de fluidos. Si hay sobrecalentamiento, llevar refrigerante y herramientas (no abrir radiador caliente).",
+        IncidentType.OTHER: "Llevar kit básico de herramientas. Si es cerrajería, llevar equipo de apertura o llaves de repuesto. Evaluar la situación al llegar.",
     }
     return recs.get(incident_type, recs[IncidentType.OTHER])

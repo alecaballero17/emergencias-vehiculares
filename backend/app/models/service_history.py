@@ -9,6 +9,7 @@ class ServiceHistory(Base):
     __tablename__ = "service_history"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     incident_id = Column(Integer, ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(50), nullable=False)
     notes = Column(Text, nullable=True)

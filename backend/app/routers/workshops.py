@@ -1,4 +1,4 @@
-"""Router de talleres: gestión de solicitudes, técnicos y operaciones."""
+"""Router de talleres: gestión de solicitudes, técnicos, estados y tracking."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
@@ -14,6 +14,8 @@ from app.schemas.incident import (
 )
 from app.services.incident_service import update_incident_status, _add_history
 from app.services.notification_service import notify_user
+from app.services.state_machine import transition_state, STATUS_LABELS
+from app.services.websocket_manager import ws_manager
 from app.utils.security import get_current_workshop
 from app.utils.geolocation import haversine_distance, estimate_arrival_minutes
 
@@ -50,6 +52,7 @@ def add_technician(
 ):
     """Agregar un nuevo técnico al taller."""
     tech = Technician(
+        tenant_id=current_workshop.tenant_id,
         workshop_id=current_workshop.id,
         name=data.name,
         phone=data.phone,
@@ -64,7 +67,10 @@ def add_technician(
 @router.get("/technicians", response_model=list[TechnicianResponse])
 def list_technicians(db: Session = Depends(get_db), current_workshop: Workshop = Depends(get_current_workshop)):
     """Listar técnicos del taller."""
-    return db.query(Technician).filter(Technician.workshop_id == current_workshop.id).all()
+    return db.query(Technician).filter(
+        Technician.workshop_id == current_workshop.id,
+        Technician.tenant_id == current_workshop.tenant_id,
+    ).all()
 
 
 @router.put("/technicians/{tech_id}", response_model=TechnicianResponse)
@@ -113,8 +119,11 @@ def list_workshop_incidents(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Ver solicitudes asignadas al taller."""
-    query = db.query(Incident).filter(Incident.workshop_id == current_workshop.id)
+    """Ver solicitudes asignadas al taller (filtrado por tenant)."""
+    query = db.query(Incident).filter(
+        Incident.workshop_id == current_workshop.id,
+        Incident.tenant_id == current_workshop.tenant_id,
+    )
     if status:
         query = query.filter(Incident.status == status)
     return query.order_by(Incident.created_at.desc()).all()
@@ -125,10 +134,14 @@ def list_available_incidents(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Ver incidentes pendientes sin taller asignado (disponibles para tomar)."""
+    """Ver incidentes en estado 'buscando_taller' del mismo tenant."""
     return (
         db.query(Incident)
-        .filter(Incident.status == IncidentStatus.PENDING, Incident.workshop_id.is_(None))
+        .filter(
+            Incident.tenant_id == current_workshop.tenant_id,
+            Incident.status == IncidentStatus.SEARCHING,
+            Incident.workshop_id.is_(None),
+        )
         .order_by(Incident.created_at.desc())
         .all()
     )
@@ -140,29 +153,32 @@ def get_workshop_incident_detail(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Ver detalle completo de un incidente asignado (con información IA)."""
+    """Ver detalle completo de un incidente (con cotizaciones e historial)."""
     incident = (
         db.query(Incident)
         .options(
             joinedload(Incident.evidences),
             joinedload(Incident.status_history),
             joinedload(Incident.payment),
+            joinedload(Incident.quotations),
         )
-        .filter(Incident.id == incident_id)
+        .filter(
+            Incident.id == incident_id,
+            Incident.tenant_id == current_workshop.tenant_id,
+        )
         .first()
     )
-    
-    # Optimización para defensa: Permitir ver el detalle si está PENDING (disponible)
-    # o si está asignado a este taller. 
+
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado")
-        
-    # Permitir ver si está disponible para todos (PENDING) o si es suyo
-    can_view = (incident.status == IncidentStatus.PENDING) or (incident.workshop_id == current_workshop.id)
-    
+
+    can_view = (
+        incident.status == IncidentStatus.SEARCHING
+        or incident.workshop_id == current_workshop.id
+    )
     if not can_view:
-         raise HTTPException(status_code=403, detail="Este incidente ya está siendo atendido por otro taller")
-         
+        raise HTTPException(status_code=403, detail="Este incidente ya está siendo atendido por otro taller")
+
     return incident
 
 
@@ -173,42 +189,62 @@ async def accept_incident(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Aceptar una solicitud de incidente (cambia estado a en_proceso)."""
-    incident = db.query(Incident).filter(Incident.id == incident_id).first()
-    
+    """
+    Aceptar un incidente. Transiciona de buscando_taller → taller_asignado.
+    Bloquea el incidente y notifica cierre a otros talleres.
+    """
+    incident = db.query(Incident).filter(
+        Incident.id == incident_id,
+        Incident.tenant_id == current_workshop.tenant_id,
+    ).first()
+
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado")
 
-    # Permitir aceptar si está PENDING (disponible) o si está ASSIGNED a este taller
-    is_valid_pending = (incident.status == IncidentStatus.PENDING and incident.workshop_id is None)
-    is_valid_assigned = (incident.status == IncidentStatus.ASSIGNED and incident.workshop_id == current_workshop.id)
+    if incident.status != IncidentStatus.SEARCHING:
+        raise HTTPException(status_code=400, detail=f"Solo se pueden aceptar incidentes en estado 'buscando_taller'. Estado actual: {incident.status.value}")
 
-    if not (is_valid_pending or is_valid_assigned):
-        raise HTTPException(status_code=400, detail="Este incidente no puede ser aceptado por este taller")
-
-    # Guardar asignación manual
+    # Asignar taller
     incident.workshop_id = current_workshop.id
     if data.technician_id:
         incident.technician_id = data.technician_id
 
-    # Calcular y asignar el ETA
+    # Calcular ETA
     distance = haversine_distance(
         incident.latitude, incident.longitude,
         current_workshop.latitude, current_workshop.longitude
     )
     incident.estimated_arrival_minutes = estimate_arrival_minutes(distance)
 
-    incident = await update_incident_status(
-        db, incident, IncidentStatus.IN_PROGRESS,
+    # Transicionar a ASSIGNED (taller_asignado)
+    ws_payload = transition_state(incident, IncidentStatus.ASSIGNED)
+
+    _add_history(
+        db, incident.id, current_workshop.tenant_id,
+        IncidentStatus.ASSIGNED.value,
         f"Aceptado por taller {current_workshop.name}",
         f"taller_{current_workshop.id}",
     )
 
+    db.commit()
+    db.refresh(incident)
+
+    # Emitir estado a suscritos
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
+
+    # Notificar cierre de oferta a otros talleres (incidente ya tomado)
+    await ws_manager.broadcast_to_workshops([], {
+        "type": "incident_taken",
+        "incident_id": incident.id,
+        "workshop_id": current_workshop.id,
+    })
+
     await notify_user(
         db, incident.user_id,
         "🔧 Tu solicitud fue aceptada",
-        f"El taller {current_workshop.name} está en camino. ETA: {incident.estimated_arrival_minutes} min",
+        f"El taller {current_workshop.name} ha aceptado tu emergencia. ETA: {incident.estimated_arrival_minutes} min",
         "incident_accepted",
+        tenant_id=current_workshop.tenant_id,
     )
 
     return incident
@@ -221,31 +257,126 @@ async def reject_incident(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Rechazar una solicitud (el incidente vuelve a pendiente para reasignación)."""
+    """Rechazar un incidente. Vuelve a buscando_taller para reasignación."""
     incident = db.query(Incident).filter(
         Incident.id == incident_id,
         Incident.workshop_id == current_workshop.id,
+        Incident.tenant_id == current_workshop.tenant_id,
         Incident.status == IncidentStatus.ASSIGNED,
     ).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incidente no encontrado")
-    
+
     rejection_notes = data.reason if data.reason else "Sin motivo especificado"
 
+    # Desasignar
     incident.workshop_id = None
     incident.technician_id = None
-    incident.status = IncidentStatus.PENDING
     incident.assigned_at = None
 
-    _add_history(db, incident.id, "pending", f"Rechazado por taller {current_workshop.name}: {rejection_notes}", f"taller_{current_workshop.id}")
+    # Volver a SEARCHING
+    ws_payload = transition_state(incident, IncidentStatus.SEARCHING)
+
+    _add_history(
+        db, incident.id, current_workshop.tenant_id,
+        IncidentStatus.SEARCHING.value,
+        f"Rechazado por taller {current_workshop.name}: {rejection_notes}",
+        f"taller_{current_workshop.id}",
+    )
+
     db.commit()
     db.refresh(incident)
+
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
 
     await notify_user(
         db, incident.user_id,
         "🔄 Buscando otro taller",
         "Tu solicitud está siendo reasignada a otro taller cercano",
         "incident_reassigning",
+        tenant_id=current_workshop.tenant_id,
+    )
+
+    return incident
+
+
+@router.put("/incidents/{incident_id}/en-route", response_model=IncidentResponse)
+async def mark_en_route(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    current_workshop: Workshop = Depends(get_current_workshop),
+):
+    """Marcar que el mecánico está en camino. taller_asignado → en_camino."""
+    incident = db.query(Incident).filter(
+        Incident.id == incident_id,
+        Incident.workshop_id == current_workshop.id,
+        Incident.tenant_id == current_workshop.tenant_id,
+        Incident.status == IncidentStatus.ASSIGNED,
+    ).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incidente no encontrado o no asignado")
+
+    ws_payload = transition_state(incident, IncidentStatus.EN_ROUTE)
+
+    _add_history(
+        db, incident.id, current_workshop.tenant_id,
+        IncidentStatus.EN_ROUTE.value,
+        f"Mecánico en camino - Taller {current_workshop.name}",
+        f"taller_{current_workshop.id}",
+    )
+
+    db.commit()
+    db.refresh(incident)
+
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
+
+    await notify_user(
+        db, incident.user_id,
+        "🚗 Auxilio en camino",
+        f"El mecánico del taller {current_workshop.name} está en camino. ETA: {incident.estimated_arrival_minutes} min",
+        "incident_en_route",
+        tenant_id=current_workshop.tenant_id,
+    )
+
+    return incident
+
+
+@router.put("/incidents/{incident_id}/arrive", response_model=IncidentResponse)
+async def mark_arrived(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    current_workshop: Workshop = Depends(get_current_workshop),
+):
+    """Marcar que el mecánico llegó. en_camino → en_atención."""
+    incident = db.query(Incident).filter(
+        Incident.id == incident_id,
+        Incident.workshop_id == current_workshop.id,
+        Incident.tenant_id == current_workshop.tenant_id,
+        Incident.status == IncidentStatus.EN_ROUTE,
+    ).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incidente no encontrado o no en camino")
+
+    ws_payload = transition_state(incident, IncidentStatus.ATTENDING)
+
+    _add_history(
+        db, incident.id, current_workshop.tenant_id,
+        IncidentStatus.ATTENDING.value,
+        f"Mecánico llegó al lugar - Taller {current_workshop.name}",
+        f"taller_{current_workshop.id}",
+    )
+
+    db.commit()
+    db.refresh(incident)
+
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
+
+    await notify_user(
+        db, incident.user_id,
+        "🔧 Mecánico ha llegado",
+        f"El mecánico del taller {current_workshop.name} está atendiendo tu vehículo",
+        "incident_attending",
+        tenant_id=current_workshop.tenant_id,
     )
 
     return incident
@@ -258,29 +389,38 @@ async def complete_incident(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Marcar un incidente como completado."""
+    """Marcar un incidente como finalizado. en_atención → finalizado."""
     incident = db.query(Incident).filter(
         Incident.id == incident_id,
         Incident.workshop_id == current_workshop.id,
-        Incident.status == IncidentStatus.IN_PROGRESS,
+        Incident.tenant_id == current_workshop.tenant_id,
+        Incident.status == IncidentStatus.ATTENDING,
     ).first()
     if not incident:
-        raise HTTPException(status_code=404, detail="Incidente no encontrado o no en proceso")
+        raise HTTPException(status_code=404, detail="Incidente no encontrado o no en atención")
 
-    # Registrar costo final (el pago lo realiza el cliente desde la app)
     incident.final_cost = data.final_cost
 
-    incident = await update_incident_status(
-        db, incident, IncidentStatus.COMPLETED,
+    ws_payload = transition_state(incident, IncidentStatus.COMPLETED)
+
+    _add_history(
+        db, incident.id, current_workshop.tenant_id,
+        IncidentStatus.COMPLETED.value,
         data.notes if data.notes else f"Servicio completado por taller {current_workshop.name}",
         f"taller_{current_workshop.id}",
     )
 
+    db.commit()
+    db.refresh(incident)
+
+    await ws_manager.broadcast_to_incident(incident.id, ws_payload)
+
     await notify_user(
         db, incident.user_id,
         "✅ Servicio completado",
-        f"El taller {current_workshop.name} ha completado el servicio",
+        f"El taller {current_workshop.name} ha completado el servicio. Costo: Bs. {data.final_cost}",
         "incident_completed",
+        tenant_id=current_workshop.tenant_id,
     )
 
     return incident

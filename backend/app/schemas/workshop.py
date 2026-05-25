@@ -13,6 +13,7 @@ class WorkshopCreate(BaseModel):
     longitude: Optional[float] = None
     capacity: int = 5
     specialties: list[str] = []
+    tenant_id: int
 
 
 class WorkshopUpdate(BaseModel):
@@ -28,6 +29,7 @@ class WorkshopUpdate(BaseModel):
 
 class WorkshopResponse(BaseModel):
     id: int
+    tenant_id: int
     name: str
     email: str
     phone: Optional[str]

@@ -6,6 +6,9 @@ import 'package:flutter_credit_card/flutter_credit_card.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../core/app_theme.dart';
 import '../services/incident_service.dart';
+import '../services/websocket_service.dart';
+import 'quotations_screen.dart';
+import 'tracking_screen.dart';
 
 class IncidentDetailScreen extends StatefulWidget {
   final int incidentId;
@@ -17,24 +20,35 @@ class IncidentDetailScreen extends StatefulWidget {
 
 class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   final _incidentService = IncidentService();
+  final _wsService = WebSocketService();
   Map<String, dynamic>? _incident;
   bool _isLoading = true;
   bool _isPaymentLoading = false;
   String _selectedPaymentMethod = '';
-  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadDetail();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      _refreshDetailSilently();
+    _initWebSocket();
+  }
+
+  void _initWebSocket() async {
+    await _wsService.connect();
+    _wsService.subscribeIncident(widget.incidentId);
+    _wsService.messages.listen((msg) {
+      if (msg['incident_id'] == widget.incidentId) {
+        if (msg['type'] == 'status_change') {
+          _refreshDetailSilently();
+        }
+      }
     });
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    _wsService.unsubscribeIncident(widget.incidentId);
+    _wsService.disconnect();
     super.dispose();
   }
 
@@ -58,12 +72,42 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   }
 
   Future<void> _cancelIncident() async {
-    final success = await _incidentService.cancelIncident(widget.incidentId);
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Emergencia cancelada.')),
-      );
-      _loadDetail();
+    final status = _incident?['status'] ?? 'pendiente';
+    final hasFee = status == 'en_camino' || status == 'en_atencion';
+    final String alertText = hasFee
+        ? '⚠️ ATENCIÓN: El mecánico ya está en camino o atendiéndote. Cancelar en este punto incurre en una Tarifa de Reconocimiento obligatoria de Bs. 50.\n\n¿Estás seguro de cancelar?'
+        : '¿Estás seguro de que deseas cancelar la solicitud de asistencia?';
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Text('Confirmar Cancelación'),
+        content: Text(alertText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No, continuar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sí, cancelar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      final success = await _incidentService.cancelIncident(widget.incidentId);
+      setState(() => _isLoading = false);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Emergencia cancelada.')),
+        );
+        _loadDetail();
+      }
     }
   }
 
@@ -518,22 +562,26 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
 
   String _getStatusText(String status) {
     switch (status) {
-      case 'pending': return 'PENDIENTE';
-      case 'assigned': return 'ASIGNADO';
-      case 'in_progress': return 'EN PROCESO';
-      case 'completed': return 'COMPLETADO';
-      case 'cancelled': return 'CANCELADO';
+      case 'pendiente': return 'PENDIENTE';
+      case 'buscando_taller': return 'BUSCANDO TALLER';
+      case 'taller_asignado': return 'TALLER ASIGNADO';
+      case 'en_camino': return 'MECÁNICO EN CAMINO';
+      case 'en_atencion': return 'EN ATENCIÓN';
+      case 'finalizado': return 'FINALIZADO';
+      case 'cancelado': return 'CANCELADO';
       default: return status.toUpperCase();
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'pending': return Colors.orange;
-      case 'assigned': return Colors.cyan;
-      case 'in_progress': return Colors.blue;
-      case 'completed': return Colors.green;
-      case 'cancelled': return Colors.red;
+      case 'pendiente': return Colors.orange;
+      case 'buscando_taller': return Colors.amber;
+      case 'taller_asignado': return Colors.cyan;
+      case 'en_camino': return Colors.blue;
+      case 'en_atencion': return Colors.purple;
+      case 'finalizado': return Colors.green;
+      case 'cancelado': return Colors.red;
       default: return AppTheme.primaryNeon;
     }
   }
@@ -895,16 +943,67 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
               const SizedBox(height: 20),
             ],
 
-            // Botones de Acción
-            if (status == 'pending' || status == 'assigned')
+            // Botones de Acción del flujo Fase 2
+            if (status == 'pendiente' || status == 'buscando_taller') ...[
               FadeInUp(
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _cancelIncident,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuotationsScreen(
+                            incidentId: widget.incidentId,
+                            incidentDescription: _incident?['description'],
+                          ),
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.errorRed.withOpacity(0.1),
+                      backgroundColor: AppTheme.accentNeon,
+                    ),
+                    child: const Text('VER COTIZACIONES / OFERTAS', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            if (status == 'taller_asignado' || status == 'en_camino' || status == 'en_atencion') ...[
+              FadeInUp(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TrackingScreen(
+                            incidentId: widget.incidentId,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryNeon,
+                    ),
+                    child: const Text('SEGUIR EN VIVO (MAPA)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            if (status == 'pendiente' || status == 'buscando_taller' || status == 'taller_asignado' || status == 'en_camino' || status == 'en_atencion')
+              FadeInUp(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _cancelIncident,
+                    style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppTheme.errorRed),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text('CANCELAR EMERGENCIA', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
                   ),

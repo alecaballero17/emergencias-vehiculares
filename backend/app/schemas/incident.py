@@ -8,6 +8,7 @@ from app.models.enums import (
     EvidenceType,
     PaymentStatus,
     PaymentMethod,
+    QuotationStatus,
 )
 
 
@@ -48,12 +49,63 @@ class PaymentResponse(BaseModel):
     amount: float
     commission_amount: float
     commission_percent: float
+    cancellation_fee: float
     payment_status: PaymentStatus
     payment_method: Optional[PaymentMethod]
+    payment_intent_id: Optional[str]
     created_at: datetime
     paid_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
+
+
+# --- Quotation ---
+class QuotationCreate(BaseModel):
+    amount: float
+    estimated_repair_hours: Optional[float] = None
+    description: Optional[str] = None
+
+
+class QuotationResponse(BaseModel):
+    id: int
+    incident_id: int
+    workshop_id: int
+    tenant_id: int
+    amount: float
+    estimated_repair_hours: Optional[float]
+    description: Optional[str]
+    status: QuotationStatus
+    created_at: datetime
+    accepted_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}
+
+
+# --- Cost Estimate AI ---
+class CostEstimateRequest(BaseModel):
+    description: str
+    incident_type: Optional[str] = None
+
+
+class CostEstimateResponse(BaseModel):
+    min_cost: float
+    max_cost: float
+    currency: str = "BOB"
+    reasoning: str
+
+
+# --- Payment Intent (Paralela Simulation) ---
+class PaymentIntentCreate(BaseModel):
+    incident_id: int
+    amount: float
+    payment_method: PaymentMethod = PaymentMethod.PARALELA
+
+
+class PaymentIntentResponse(BaseModel):
+    payment_intent_id: str
+    status: str
+    amount: float
+    currency: str = "BOB"
 
 
 # --- Incident ---
@@ -63,6 +115,7 @@ class IncidentCreate(BaseModel):
     longitude: float
     address: Optional[str] = None
     description: Optional[str] = None
+    local_uuid: Optional[str] = None  # Para idempotencia offline
 
 
 class IncidentUpdate(BaseModel):
@@ -72,6 +125,7 @@ class IncidentUpdate(BaseModel):
 
 class IncidentResponse(BaseModel):
     id: int
+    tenant_id: int
     user_id: int
     vehicle_id: Optional[int]
     workshop_id: Optional[int]
@@ -87,12 +141,20 @@ class IncidentResponse(BaseModel):
     ai_summary: Optional[str]
     ai_classification: Optional[str]
     ai_confidence: Optional[float]
+    ai_cost_estimate_min: Optional[float]
+    ai_cost_estimate_max: Optional[float]
     estimated_arrival_minutes: Optional[int]
     final_cost: Optional[float]
+    cancellation_fee: Optional[float]
+    local_uuid: Optional[str]
     created_at: datetime
     updated_at: datetime
+    searching_at: Optional[datetime]
     assigned_at: Optional[datetime]
+    en_route_at: Optional[datetime]
+    attending_at: Optional[datetime]
     completed_at: Optional[datetime]
+    cancelled_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
 
@@ -101,6 +163,7 @@ class IncidentDetail(IncidentResponse):
     evidences: list[EvidenceResponse] = []
     status_history: list[ServiceHistoryResponse] = []
     payment: Optional[PaymentResponse] = None
+    quotations: list[QuotationResponse] = []
 
 
 # --- AI Analysis Result ---
@@ -111,6 +174,8 @@ class AIAnalysisResult(BaseModel):
     summary: str
     classification_details: str
     audio_transcription: Optional[str] = None
+    cost_estimate_min: Optional[float] = None
+    cost_estimate_max: Optional[float] = None
 
 
 # --- Assignment ---
@@ -142,3 +207,13 @@ class IncidentReject(BaseModel):
 class IncidentComplete(BaseModel):
     final_cost: float
     notes: Optional[str] = None
+
+
+# --- Tenant ---
+class TenantResponse(BaseModel):
+    id: int
+    name: str
+    slug: str
+    is_active: bool
+
+    model_config = {"from_attributes": True}

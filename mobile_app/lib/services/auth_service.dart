@@ -28,10 +28,20 @@ class AuthService {
     }
   }
 
+  Future<List<dynamic>> getTenants() async {
+    try {
+      final response = await _dio.get('${ApiConstants.baseUrl}/tenants/');
+      return response.data ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<AuthResponse?> registerUser({
     required String email,
     required String password,
     required String fullName,
+    required int tenantId,
     String? phone,
   }) async {
     try {
@@ -42,6 +52,7 @@ class AuthService {
           'password': password,
           'full_name': fullName,
           'phone': phone,
+          'tenant_id': tenantId,
         },
       );
 

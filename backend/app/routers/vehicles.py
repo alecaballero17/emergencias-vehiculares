@@ -17,6 +17,7 @@ def create_vehicle(data: VehicleCreate, db: Session = Depends(get_db), current_u
         raise HTTPException(status_code=400, detail="La placa ya está registrada")
 
     vehicle = Vehicle(
+        tenant_id=current_user.tenant_id,
         user_id=current_user.id,
         brand=data.brand,
         model=data.model,

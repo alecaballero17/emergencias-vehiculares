@@ -28,6 +28,7 @@
 - [Arquitectura](#-arquitectura)
 - [Tecnologías](#-tecnologías)
 - [Módulos de IA](#-módulos-de-inteligencia-artificial)
+- [Nuevas Características (Fase 2)](#-nuevas-características-fase-2)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Requisitos Previos](#-requisitos-previos)
 - [Instalación y Configuración](#-instalación-y-configuración)
@@ -145,16 +146,16 @@ Una plataforma inteligente que utiliza **Inteligencia Artificial (Google Gemini)
 
 | Capa | Tecnología | Propósito |
 |------|-----------|-----------|
-| **Backend** | FastAPI + Uvicorn (Python 3.12) | API REST, lógica de negocio |
-| **ORM** | SQLAlchemy 2.x + Alembic | Mapeo de datos y migraciones |
-| **Base de Datos** | PostgreSQL 16 | Persistencia relacional |
-| **Frontend Web** | Angular 18 (Standalone) | Dashboard de talleres |
-| **App Móvil** | Flutter 3.x (Dart) | Aplicación del cliente |
-| **IA Multimodal** | Google Gemini 1.5 Flash | Análisis de imagen, audio y texto |
+| **Backend** | FastAPI + Uvicorn (Python 3.12) | API REST, arquitectura Multi-tenant SaaS |
+| **ORM** | SQLAlchemy 2.x + Alembic | Mapeo de datos y migraciones con tenant_id |
+| **Base de Datos** | PostgreSQL 16 | Persistencia relacional aislada por tenant |
+| **Frontend Web** | Angular 18 (PWA + Service Worker) | Dashboard de talleres, instalable y con caché offline |
+| **App Móvil** | Flutter 3.x (Dart + Hive) | App de cliente con soporte Offline y base de datos Hive |
+| **IA Multimodal** | Google Gemini 1.5 Flash | Diagnóstico multimodal, IA en español y estimador de costos en Bs. |
 | **Geocodificación** | Nominatim (OpenStreetMap) | Dirección legible desde coordenadas |
-| **Notificaciones** | flutter_local_notifications + FCM | Notificaciones push nativas con vibración y sonido |
-| **Sincronización** | Polling Asíncrono (Timer) | Sincronización en tiempo real cada 3-5s sin WebSockets |
-| **Autenticación** | JWT (HS256) + bcrypt | Tokens con expiración 24h |
+| **Notificaciones** | flutter_local_notifications | Notificaciones instantáneas y vibración en-app |
+| **Sincronización** | WebSockets (Bidireccional) | Tracking en vivo y transiciones de estado en tiempo real |
+| **Autenticación** | JWT (HS256) + bcrypt | Autenticación robusta con tenant_id embebido en el token |
 | **Estilos** | SCSS + Google Fonts (Inter) | UI premium con dark theme (Glassmorphism) |
 
 ---
@@ -196,6 +197,50 @@ Algoritmo multifactor para encontrar el mejor taller disponible:
 | 📊 Carga de trabajo actual | 10% | Incidentes activos |
 
 > 📍 Radio máximo de búsqueda: **50 km**
+
+---
+
+## 🚀 Nuevas Características (Fase 2)
+
+#### 🏢 Arquitectura Multi-tenant SaaS
+La plataforma ha evolucionado a un modelo SaaS multi-inquilino.
+* **Aislamiento a Nivel de Base de Datos:** Todas las tablas principales cuentan con un campo `tenant_id` indexado. Las consultas y escrituras se filtran estrictamente a nivel de base de datos para evitar fugas de información entre inquilinos.
+* **Detección de Inquilinos:** El backend detecta el inquilino a través del token JWT (que incluye el `tenant_id` en su payload) o mediante el encabezado HTTP `X-Tenant-ID`.
+* **Registro Dinámico:** En la app móvil, el usuario puede seleccionar dinámicamente su red/inquilino al registrarse, consultando la lista de tenants activos en `/api/tenants/`.
+
+#### 🤖 Estimador de Costos con IA en Bolivianos (Bs.)
+Se incorporó el endpoint `POST /api/ai/estimate-cost` que utiliza **Google Gemini 1.5 Flash** para proporcionar una estimación de precios realista para el contexto boliviano.
+* **Contexto Local:** La IA calcula costos mínimos y máximos en Bolivianos (Bs.) para servicios en el departamento de Santa Cruz de la Sierra.
+* **Entrada de Datos:** Analiza el tipo de incidente, severidad, descripción textual y factores de mercado.
+* **Formato Estructurado:** Retorna un JSON con `min_cost` y `max_cost` listos para ser mostrados como referencia en la cotización.
+
+#### ⚙️ Máquina de 7 Estados y Política de Cancelación
+Se implementó un flujo riguroso para la gestión del ciclo de vida del incidente:
+1. `pending` (Pendiente): Incidente registrado, esperando ofertas.
+2. `searching` (Buscando taller): Taller analizando/enviando cotizaciones.
+3. `assigned` (Taller asignado): Cliente acepta una oferta; se cancelan las demás y se asigna el técnico.
+4. `en_route` (En camino): El técnico inicia su traslado al punto del cliente.
+5. `attending` (En atención): El técnico ha llegado al lugar y está trabajando.
+6. `completed` (Finalizado): Servicio culminado, cobro registrado y procesado.
+7. `cancelled` (Cancelado): Reporte suspendido.
+* **Tarifa de Cancelación:** Si el cliente cancela un incidente después de que ya ha sido asignado un taller (`assigned`, `en_route` o `attending`), el sistema aplica automáticamente una **tarifa de penalización fija de Bs. 50**, la cual se registra en el modelo de pagos y se descuenta/acumula en el historial de deudas del cliente.
+
+#### 📡 Sincronización Offline con Hive (App Móvil)
+Soporte de resiliencia de red avanzado:
+* **Persistencia Local:** Los vehículos registrados, reportes de incidentes activos e histórico de emergencias se almacenan localmente en cajas de **Hive** en el celular.
+* **Cola de Sincronización:** Si el usuario no tiene conexión de red al presionar el botón de pánico SOS, la app almacena el incidente localmente generando un `local_uuid` temporal.
+* **Sincronización en Segundo Plano:** Mediante un servicio de monitoreo de conectividad, en cuanto se recupera el acceso a Internet, los incidentes pendientes en la cola local se envían al backend de forma segura y se reemplazan localmente con la respuesta oficial del servidor.
+
+#### 📍 Tracking en Vivo vía WebSockets
+* **Comunicación en Tiempo Real:** Canal WebSocket bidireccional en `/api/incidents/{incident_id}/track`.
+* **Intercambio de Ubicación:** Transmite de forma fluida las coordenadas geográficas del mecánico (latitud/longitud) hacia la app del conductor en tiempo real.
+* **Simulación de Ruta:** Movimiento interactivo del técnico con estimaciones dinámicas de distancia, tiempo de llegada (ETA) y visualización del avance del estado del servicio.
+
+#### 📊 PWA & Panel de Analíticas con Mapa de Calor (Angular)
+El panel web de administración de talleres se transformó en una Aplicación Web Progresiva instalable y se le agregaron capacidades analíticas robustas:
+* **Instalabilidad PWA:** Soporte completo de Service Worker y manifiesto con logos optimizados (`icon-192.png`, `icon-512.png`), permitiendo la instalación en escritorio o móviles y caché offline del shell de la aplicación.
+* **Mapa de Calor (Heatmap Leaflet):** Integración dinámica de Leaflet y Leaflet.heat (vía CDN) para representar geográficamente la densidad y puntos calientes de los incidentes viales.
+* **Métricas Clave (KPIs):** Tasa de cumplimiento de acuerdos de nivel de servicio (SLA), tiempo promedio de llegada, tiempo promedio de asignación, costo acumulado de comisiones y análisis del total de cancelaciones.
 
 ---
 
@@ -443,54 +488,79 @@ adb reverse tcp:8000 tcp:8000
 
 ## 📡 API Endpoints
 
-### 🔐 Autenticación
+### 🔐 Autenticación y Tenants
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/api/auth/register` | Registro de nuevo usuario |
-| `POST` | `/api/auth/login` | Inicio de sesión → JWT Token |
+| `GET`  | `/api/tenants/` | Listar todas las redes de talleres activas (Público) |
+| `POST` | `/api/auth/register/user` | Registro de nuevo cliente con `tenant_id` |
+| `POST` | `/api/auth/register/workshop` | Registro de nuevo taller con `tenant_id` |
+| `POST` | `/api/auth/login` | Inicio de sesión → JWT Token con `tenant_id` |
 
 ### 👤 Usuarios
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/users/me` | Obtener perfil autenticado |
+| `GET` | `/api/users/me` | Obtener perfil autenticado (filtrado por tenant) |
 | `PUT` | `/api/users/me` | Actualizar perfil |
 
 ### 🚙 Vehículos
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/vehicles/` | Listar vehículos del usuario |
-| `POST` | `/api/vehicles/` | Registrar nuevo vehículo |
+| `POST` | `/api/vehicles/` | Registrar nuevo vehículo con `tenant_id` |
 | `PUT` | `/api/vehicles/{id}` | Editar vehículo |
 | `DELETE` | `/api/vehicles/{id}` | Eliminar vehículo |
 
 ### 🆘 Incidentes (Emergencias)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/api/incidents/` | Crear reporte multimedia (foto + audio + GPS) |
+| `POST` | `/api/incidents/` | Reportar emergencia (foto + audio + GPS + `local_uuid` offline) |
 | `GET` | `/api/incidents/` | Listar incidentes del usuario |
-| `GET` | `/api/incidents/{id}` | Detalle completo con análisis IA |
-| `PUT` | `/api/incidents/{id}/cancel` | Cancelar emergencia |
+| `GET` | `/api/incidents/{id}` | Detalle completo con evidencias y cotizaciones |
+| `PUT` | `/api/incidents/{id}/cancel` | Cancelar emergencia (calcula recargo de Bs. 50 si aplica) |
+
+### 🔧 Cotizaciones (Ofertas de Talleres)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/quotations/{incident_id}` | Taller envía cotización (monto + tiempo estimado) |
+| `GET`  | `/api/quotations/{incident_id}` | Cliente visualiza ofertas recibidas |
+| `PUT`  | `/api/quotations/{quotation_id}/accept` | Cliente acepta oferta (auto-rechaza las demás, asigna taller) |
 
 ### 🔧 Talleres
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/workshops/profile` | Perfil del taller autenticado |
 | `PUT` | `/api/workshops/profile` | Actualizar perfil |
-| `GET` | `/api/workshops/incidents/available` | Incidentes disponibles en zona |
+| `GET` | `/api/workshops/incidents/available` | Incidentes disponibles en zona filtrados por especialidad |
 | `GET` | `/api/workshops/incidents/assigned` | Incidentes asignados al taller |
-| `PUT` | `/api/workshops/incidents/{id}/accept` | Aceptar + asignar técnico |
-| `PUT` | `/api/workshops/incidents/{id}/reject` | Rechazar solicitud |
-| `PUT` | `/api/workshops/incidents/{id}/complete` | Completar servicio + monto |
-| `GET` | `/api/workshops/technicians` | Listar técnicos |
+| `PUT` | `/api/workshops/incidents/{id}/accept` | Aceptar incidente + asignar técnico |
+| `PUT` | `/api/workshops/incidents/{id}/reject` | Rechazar y devolver a búsqueda general |
+| `PUT` | `/api/workshops/incidents/{id}/arrive` | Reportar llegada del técnico a la ubicación (Atención) |
+| `PUT` | `/api/workshops/incidents/{id}/complete` | Completar servicio + registrar costo final |
+| `GET` | `/api/workshops/technicians` | Listar técnicos del taller |
 | `POST` | `/api/workshops/technicians` | Registrar técnico |
-| `PUT` | `/api/workshops/technicians/{id}` | Actualizar técnico |
-| `DELETE` | `/api/workshops/technicians/{id}` | Eliminar técnico |
 
 ### 💳 Pagos
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/api/payments/{incident_id}` | Cliente realiza pago (QR/Efectivo/Tarjeta/Transferencia) |
-| `GET` | `/api/payments/{incident_id}` | Consultar estado del pago |
+| `POST` | `/api/payments/{incident_id}` | Registrar intención de pago o pago directo alternativo |
+| `POST` | `/api/payments/{incident_id}/confirm` | Confirmar pago simulando pasarela Paralela |
+
+### 📊 KPIs y Analíticas
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET`  | `/api/analytics/summary` | Totales y tasa de finalización |
+| `GET`  | `/api/analytics/assignment-time` | Tiempo promedio de asignación |
+| `GET`  | `/api/analytics/arrival-time` | Tiempo promedio de llegada |
+| `GET`  | `/api/analytics/incidents-by-type` | Distribución por tipo de incidente |
+| `GET`  | `/api/analytics/top-workshops` | Talleres eficientes y tasas de éxito |
+| `GET`  | `/api/analytics/incident-heatmap` | Geolocalizaciones críticas para mapa de calor |
+| `GET`  | `/api/analytics/cancelled-cases` | Detalle e importes de cancelaciones |
+| `GET`  | `/api/analytics/sla-compliance` | % de cumplimiento de tiempos estimados (SLA) |
+
+### 🤖 Inteligencia Artificial
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/ai/estimate-cost` | Estimar costos en bolivianos (Bs.) con Gemini Flash |
 
 ### 🔔 Notificaciones
 | Método | Endpoint | Descripción |
@@ -500,59 +570,60 @@ adb reverse tcp:8000 tcp:8000
 
 ---
 
-## 🔐 Credenciales de Prueba
+## 🔐 Credenciales de Prueba (Multi-tenant)
 
 ### 📱 Clientes (App Móvil)
 
-| Usuario | Email | Contraseña |
-|---------|-------|------------|
-| Carlos Mendoza | `carlos@example.com` | `password123` |
-| María García | `maria@example.com` | `password123` |
+| Tenant | Cliente | Email | Contraseña |
+|--------|---------|-------|------------|
+| **Auxilio Norte (T1)** | Juan Pérez | `juan@demo.com` | `123456` |
+| **Auxilio Norte (T1)** | María García | `maria@demo.com` | `123456` |
+| **Mecánicos Express (T2)** | Ana Rodríguez | `ana@demo.com` | `123456` |
 
 ### 🖥️ Talleres (Panel Web)
 
-| Taller | Email | Contraseña |
-|--------|-------|------------|
-| Taller Mecánico El Rápido | `elrapido@example.com` | `taller123` |
-| Taller Mecánico López | `lopez@example.com` | `taller123` |
-| Servicio Automotriz Premium | `premium@example.com` | `taller123` |
+| Tenant | Taller | Email | Contraseña |
+|--------|--------|-------|------------|
+| **Auxilio Norte (T1)** | Taller Automotriz Central | `taller1@demo.com` | `123456` |
+| **Auxilio Norte (T1)** | Mecánica Rápida Sur | `taller2@demo.com` | `123456` |
+| **Mecánicos Express (T2)** | Express Mecánica | `express1@demo.com` | `123456` |
 
 ---
 
-## 📊 Modelos de Datos
+## 📊 Modelos de Datos (Evolución Fase 2)
 
-El sistema cuenta con **10 modelos** y **7 enumeraciones**:
+El sistema cuenta con **11 modelos** y **8 enumeraciones**:
 
 | Modelo | Descripción | Relaciones |
 |--------|-------------|------------|
-| `User` | Clientes registrados | → Vehículos, Incidentes |
+| `Tenant` | Redes de talleres aisladas SaaS | → Users, Workshops, Incidents |
+| `User` | Clientes vinculados a un tenant | → Vehículos, Incidentes |
 | `Vehicle` | Vehículos del cliente | → Incidentes |
-| `Workshop` | Talleres mecánicos con ubicación y especialidades | → Técnicos, Incidentes |
-| `Technician` | Técnicos con especialidades | → Taller |
-| `Incident` | Emergencias con análisis IA, prioridad y estado | → Usuario, Vehículo, Taller, Evidencias, Pago |
+| `Workshop` | Talleres mecánicos del tenant con ubicación y especialidades | → Técnicos, Incidentes |
+| `Technician` | Técnicos asignados del taller | → Taller |
+| `Quotation` | Ofertas económicas enviadas a incidentes | → Taller, Incidente |
+| `Incident` | Emergencias con diagnóstico IA, timestamps y recargos | → Usuario, Vehículo, Taller, Evidencias, Pago, Quotations |
 | `Evidence` | Evidencia multimedia (imágenes, audio, texto) | → Incidente |
-| `Payment` | Pagos con comisión y método de pago | → Incidente |
-| `Notification` | Notificaciones push y en-app | → Usuario/Taller |
-| `ServiceHistory` | Historial de cambios de estado por incidente | → Incidente |
+| `Payment` | Pagos directos o via pasarela Paralela con comisiones | → Incidente |
+| `Notification` | Notificaciones push, en-app y WebSocket | → Usuario/Taller |
+| `ServiceHistory` | Historial de cambios de estado detallados | → Incidente |
 
 ### Tipos de Incidente
 
 | Tipo | Emoji | Descripción |
 |------|-------|-------------|
-| `tire` | 🛞 | Llanta ponchada |
-| `engine` | 🔧 | Falla de motor |
-| `battery` | 🔋 | Batería descargada |
-| `crash` | 💥 | Accidente/Colisión |
-| `keys_lost` | 🔑 | Llave perdida |
-| `keys_locked` | 🔐 | Llave dentro del vehículo |
-| `overheating` | 🌡️ | Sobrecalentamiento |
-| `other` | ❓ | Otro |
+| `battery` | 🔋 | Batería descargada / Problemas eléctricos |
+| `tire` | 🛞 | Pinchazo / Llanta dañada |
+| `crash` | 💥 | Accidente / Colisión vehicular |
+| `engine` | 🔧 | Falla de motor / Sobrecalentamiento |
+| `other` | ❓ | Otro problema (p. ej. pérdida de llaves) |
 
-### Flujo de Estados
+### Flujo y Máquina de 7 Estados
 
 ```
-PENDIENTE → ASIGNADO → EN PROCESO → COMPLETADO → PAGADO
-                                  ↘ CANCELADO
+pendiente ──▶ buscando_taller ──▶ taller_asignado ──▶ en_camino ──▶ en_atencion ──▶ finalizado
+   │                 │                  │               │               │
+   └─────────────────┴──────────────────┴───────────────┴───────────────┴──────▶ cancelado
 ```
 
 ---

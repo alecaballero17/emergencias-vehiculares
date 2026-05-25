@@ -1,3 +1,4 @@
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.workshop import Workshop
@@ -7,6 +8,7 @@ from app.models.evidence import Evidence
 from app.models.service_history import ServiceHistory
 from app.models.payment import Payment
 from app.models.notification import Notification
+from app.models.quotation import Quotation
 from app.models.enums import (
     UserRole,
     IncidentType,
@@ -15,9 +17,11 @@ from app.models.enums import (
     EvidenceType,
     PaymentStatus,
     PaymentMethod,
+    QuotationStatus,
 )
 
 __all__ = [
+    "Tenant",
     "User",
     "Vehicle",
     "Workshop",
@@ -27,6 +31,7 @@ __all__ = [
     "ServiceHistory",
     "Payment",
     "Notification",
+    "Quotation",
     "UserRole",
     "IncidentType",
     "IncidentPriority",
@@ -34,4 +39,5 @@ __all__ = [
     "EvidenceType",
     "PaymentStatus",
     "PaymentMethod",
+    "QuotationStatus",
 ]

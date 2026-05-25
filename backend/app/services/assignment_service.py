@@ -1,6 +1,6 @@
 """
 Motor de asignación inteligente de talleres.
-Evalúa múltiples factores para seleccionar el taller más adecuado.
+Evalúa múltiples factores con filtro multi-tenant obligatorio.
 """
 from sqlalchemy.orm import Session
 from app.models.workshop import Workshop
@@ -23,25 +23,38 @@ WEIGHTS = {
 MAX_SEARCH_RADIUS_KM = 50.0
 
 
+def find_nearby_workshops_by_specialty(
+    db: Session,
+    incident: Incident,
+    tenant_id: int,
+) -> list[WorkshopCandidate]:
+    """
+    Busca talleres del MISMO tenant que estén cerca y tengan la especialidad.
+    Retorna lista de candidatos ordenada por score (para alertas WebSocket).
+    """
+    candidates = _get_candidate_workshops(db, incident, tenant_id)
+    candidates.sort(key=lambda c: c.score, reverse=True)
+    return candidates
+
+
 def find_best_workshop(
     db: Session,
     incident: Incident,
+    tenant_id: int | None = None,
 ) -> AssignmentResult | None:
     """
     Encuentra el mejor taller para atender un incidente.
-    Considera: distancia, especialidad, disponibilidad, capacidad y carga actual.
+    Siempre filtra por tenant_id.
     """
-    candidates = _get_candidate_workshops(db, incident)
+    tid = tenant_id or incident.tenant_id
+    candidates = _get_candidate_workshops(db, incident, tid)
 
     if not candidates:
         return None
 
-    # Ordenar por score descendente
     candidates.sort(key=lambda c: c.score, reverse=True)
-
     best = candidates[0]
 
-    # Buscar técnico disponible en el taller seleccionado
     technician = _find_available_technician(db, best.workshop_id, incident.incident_type)
 
     return AssignmentResult(
@@ -49,26 +62,27 @@ def find_best_workshop(
         workshop_id=best.workshop_id,
         technician_id=technician.id if technician else None,
         estimated_arrival_minutes=best.estimated_arrival_minutes,
-        candidates=candidates[:5],  # Top 5 candidatos
+        candidates=candidates[:5],
     )
 
 
-def _get_candidate_workshops(db: Session, incident: Incident) -> list[WorkshopCandidate]:
-    """Obtiene la lista de talleres candidatos con su score."""
-    workshops = db.query(Workshop).filter(Workshop.is_active == True).all()
+def _get_candidate_workshops(db: Session, incident: Incident, tenant_id: int) -> list[WorkshopCandidate]:
+    """Obtiene talleres candidatos filtrados por tenant_id."""
+    workshops = db.query(Workshop).filter(
+        Workshop.tenant_id == tenant_id,
+        Workshop.is_active == True,
+    ).all()
     candidates = []
 
     for ws in workshops:
         if ws.latitude is None or ws.longitude is None:
             continue
 
-        # Calcular distancia
         distance = haversine_distance(incident.latitude, incident.longitude, ws.latitude, ws.longitude)
 
         if distance > MAX_SEARCH_RADIUS_KM:
             continue
 
-        # Contar técnicos disponibles
         available_techs = (
             db.query(Technician)
             .filter(
@@ -81,24 +95,25 @@ def _get_candidate_workshops(db: Session, incident: Incident) -> list[WorkshopCa
         if available_techs == 0:
             continue
 
-        # Calcular carga actual (incidentes activos)
         active_incidents = (
             db.query(Incident)
             .filter(
                 Incident.workshop_id == ws.id,
-                Incident.status.in_([IncidentStatus.ASSIGNED, IncidentStatus.IN_PROGRESS]),
+                Incident.status.in_([
+                    IncidentStatus.ASSIGNED,
+                    IncidentStatus.EN_ROUTE,
+                    IncidentStatus.ATTENDING,
+                ]),
             )
             .count()
         )
 
-        # Calcular scores parciales
         distance_score = max(0, 1.0 - (distance / MAX_SEARCH_RADIUS_KM))
         specialty_score = _calculate_specialty_score(ws.specialties or [], incident.incident_type)
         availability_score = min(available_techs / max(ws.capacity, 1), 1.0)
         capacity_score = max(0, 1.0 - (active_incidents / max(ws.capacity, 1)))
         workload_score = 1.0 / (1.0 + active_incidents)
 
-        # Score compuesto
         total_score = (
             WEIGHTS["distance"] * distance_score
             + WEIGHTS["specialty_match"] * specialty_score
@@ -125,21 +140,18 @@ def _get_candidate_workshops(db: Session, incident: Incident) -> list[WorkshopCa
 def _calculate_specialty_score(specialties: list[str], incident_type: IncidentType) -> float:
     """Calcula qué tan bien coincide la especialidad del taller con el incidente."""
     if not specialties:
-        return 0.3  # Score base si no tiene especialidades definidas
+        return 0.3
 
     type_value = incident_type.value
     if type_value in specialties:
         return 1.0
 
-    # Mapeo de tipos relacionados
     related = {
-        "battery": ["engine", "overheating"],
-        "engine": ["battery", "overheating"],
-        "overheating": ["engine", "battery"],
+        "battery": ["engine"],
+        "engine": ["battery"],
         "tire": [],
         "crash": ["engine"],
-        "keys_lost": ["keys_locked"],
-        "keys_locked": ["keys_lost"],
+        "other": [],
     }
 
     related_types = related.get(type_value, [])
@@ -154,8 +166,7 @@ def _find_available_technician(
     db: Session, workshop_id: int, incident_type: IncidentType
 ) -> Technician | None:
     """Busca el técnico más adecuado disponible en el taller."""
-    # Primero buscar técnico con especialidad coincidente
-    technician = (
+    technicians = (
         db.query(Technician)
         .filter(
             Technician.workshop_id == workshop_id,
@@ -164,13 +175,11 @@ def _find_available_technician(
         .all()
     )
 
-    if not technician:
+    if not technicians:
         return None
 
-    # Priorizar por especialidad
-    for tech in technician:
+    for tech in technicians:
         if incident_type.value in (tech.specialties or []):
             return tech
 
-    # Si ninguno tiene la especialidad, retornar el primero disponible
-    return technician[0]
+    return technicians[0]

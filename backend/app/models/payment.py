@@ -9,12 +9,16 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     incident_id = Column(Integer, ForeignKey("incidents.id", ondelete="CASCADE"), unique=True, nullable=False)
     amount = Column(Float, nullable=False)
     commission_amount = Column(Float, nullable=False)
     commission_percent = Column(Float, default=10.0)
+    cancellation_fee = Column(Float, default=0.0)
     payment_status = Column(SAEnum(PaymentStatus), default=PaymentStatus.PENDING)
     payment_method = Column(SAEnum(PaymentMethod), nullable=True)
+    # Simulación de pasarela Paralela
+    payment_intent_id = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     paid_at = Column(DateTime(timezone=True), nullable=True)
 

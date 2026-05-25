@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'profile', loadComponent: () => import('./pages/profile/profile').then(m => m.ProfileComponent) },
       { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then(m => m.VehiclesComponent) },
       { path: 'finance', loadComponent: () => import('./pages/finance/finance').then(m => m.FinanceComponent) },
+      { path: 'analytics', loadComponent: () => import('./pages/analytics/analytics').then(m => m.AnalyticsComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

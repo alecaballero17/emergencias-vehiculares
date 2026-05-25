@@ -12,9 +12,6 @@ class IncidentType(str, enum.Enum):
     TIRE = "tire"
     CRASH = "crash"
     ENGINE = "engine"
-    KEYS_LOST = "keys_lost"
-    KEYS_LOCKED = "keys_locked"
-    OVERHEATING = "overheating"
     OTHER = "other"
 
 
@@ -26,11 +23,14 @@ class IncidentPriority(str, enum.Enum):
 
 
 class IncidentStatus(str, enum.Enum):
-    PENDING = "pending"
-    ASSIGNED = "assigned"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+    """Máquina de estados obligatoria del segundo parcial."""
+    PENDING = "pendiente"
+    SEARCHING = "buscando_taller"
+    ASSIGNED = "taller_asignado"
+    EN_ROUTE = "en_camino"
+    ATTENDING = "en_atencion"
+    COMPLETED = "finalizado"
+    CANCELLED = "cancelado"
 
 
 class EvidenceType(str, enum.Enum):
@@ -51,3 +51,10 @@ class PaymentMethod(str, enum.Enum):
     DEBIT_CARD = "debit_card"
     MOBILE_PAYMENT = "mobile_payment"
     CASH = "cash"
+    PARALELA = "paralela"
+
+
+class QuotationStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"

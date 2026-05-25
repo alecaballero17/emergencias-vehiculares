@@ -9,12 +9,9 @@ from app.schemas.incident import AIAnalysisResult
 
 PRIORITY_MAP = {
     IncidentType.CRASH: IncidentPriority.HIGH,
-    IncidentType.OVERHEATING: IncidentPriority.HIGH,
     IncidentType.ENGINE: IncidentPriority.HIGH,
     IncidentType.BATTERY: IncidentPriority.MEDIUM,
     IncidentType.TIRE: IncidentPriority.MEDIUM,
-    IncidentType.KEYS_LOST: IncidentPriority.LOW,
-    IncidentType.KEYS_LOCKED: IncidentPriority.LOW,
     IncidentType.OTHER: IncidentPriority.MEDIUM,
 }
 
@@ -23,9 +20,6 @@ TYPE_LABELS = {
     IncidentType.TIRE: "Pinchazo / Llanta dañada",
     IncidentType.CRASH: "Accidente / Choque",
     IncidentType.ENGINE: "Falla de motor",
-    IncidentType.OVERHEATING: "Sobrecalentamiento",
-    IncidentType.KEYS_LOST: "Llave perdida",
-    IncidentType.KEYS_LOCKED: "Llave dentro del vehículo",
     IncidentType.OTHER: "Otro problema",
 }
 
@@ -60,7 +54,7 @@ async def classify_incident(
                 "user_description": text_description,
                 "audio_findings": audio_analysis,
                 "image_findings": image_analyses,
-                "possible_types": "battery|tire|crash|engine|overheating|keys_lost|keys_locked|other",
+                "possible_types": "battery|tire|crash|engine|other",
                 "possible_priorities": "low|medium|high|critical"
             }
             
@@ -71,7 +65,7 @@ async def classify_incident(
 
             RESPONDE ÚNICAMENTE EN JSON:
             {{
-                "incident_type": "battery|tire|crash|engine|overheating|keys_lost|keys_locked|other",
+                "incident_type": "battery|tire|crash|engine|other",
                 "priority": "low|medium|high|critical",
                 "confidence": 0.0-1.0,
                 "summary": "GENERAR FICHA TÉCNICA CON ESTE FORMATO EXACTO:
@@ -162,10 +156,8 @@ def _classify_from_text(text: str) -> str:
         "battery": ["batería", "no enciende", "no arranca", "arranque", "eléctric"],
         "tire": ["llanta", "neumático", "pinchazo", "ponchad", "rueda", "rin"],
         "crash": ["choque", "accidente", "golpe", "colisión", "impacto", "volcadura"],
-        "engine": ["motor", "falla mecánica", "aceite", "ruido extraño", "vibración"],
-        "overheating": ["sobrecalentamiento", "temperatura", "humo", "vapor", "radiador", "caliente"],
-        "keys_lost": ["perdí la llave", "llave perdida", "no encuentro llave", "sin llave"],
-        "keys_locked": ["llave dentro", "cerré con llave adentro", "quedó la llave"],
+        "engine": ["motor", "falla mecánica", "aceite", "ruido extraño", "vibración", "sobrecalentamiento", "temperatura", "humo", "vapor", "radiador", "caliente"],
+        "other": ["perdí la llave", "llave perdida", "no encuentro llave", "sin llave", "llave dentro", "cerré con llave adentro", "quedó la llave"],
     }
 
     for incident_type, keywords in keyword_map.items():

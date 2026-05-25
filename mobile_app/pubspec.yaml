@@ -38,6 +38,14 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^17.1.1
 
+  # WebSockets, Offline, Sync & Maps
+  web_socket_channel: ^3.0.0
+  connectivity_plus: ^6.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  uuid: ^4.3.3
+  google_maps_flutter: ^2.6.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

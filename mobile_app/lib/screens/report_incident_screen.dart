@@ -11,6 +11,9 @@ import 'package:audioplayers/audioplayers.dart';
 import '../core/app_theme.dart';
 import '../models/vehicle_model.dart';
 import '../services/incident_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_service.dart';
+import 'quotations_screen.dart';
 
 class ReportIncidentScreen extends StatefulWidget {
   final Vehicle selectedVehicle;
@@ -178,8 +181,27 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         timeLimit: const Duration(seconds: 10),
       );
 
-      // 2. Enviar al Backend
-      final success = await _incidentService.reportIncident(
+      // 2. Enviar al Backend (verificar conexión primero)
+      final isOnline = ConnectivityService().isOnline;
+      
+      if (!isOnline) {
+        await OfflineService.instance.saveOfflineIncident(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          vehicleId: widget.selectedVehicle.id,
+          description: _descriptionController.text.trim().isNotEmpty
+              ? _descriptionController.text.trim()
+              : null,
+          audioPath: _audioPath,
+          imagePaths: _selectedImages.map((img) => img.path).toList(),
+        );
+        if (mounted) {
+          _showOfflineSuccess();
+        }
+        return;
+      }
+
+      final result = await _incidentService.reportIncident(
         latitude: position.latitude,
         longitude: position.longitude,
         vehicleId: widget.selectedVehicle.id,
@@ -190,8 +212,10 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         imageFiles: _selectedImages,
       );
 
-      if (success && mounted) {
-        _showSuccess();
+      if (result != null && mounted) {
+        final incidentId = result['id'] as int;
+        final description = result['description'] as String?;
+        _showSuccess(incidentId, description);
       } else {
         throw Exception('Servidor no disponible');
       }
@@ -216,16 +240,56 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     }
   }
 
-  void _showSuccess() {
+  void _showSuccess(int incidentId, String? description) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardBg,
         title: const Text('✅ Emergencia Reportada'),
-        content: const Text('Un taller ha sido notificado y un técnico está siendo asignado.'),
+        content: const Text('Un taller ha sido notificado y un técnico está siendo asignado. Presione abajo para ver ofertas.'),
         actions: [
-          TextButton(
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Cerrar Dialog
+              Navigator.of(context).pop(); // Volver al Home
+              // Navegar a Cotizaciones
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuotationsScreen(
+                    incidentId: incidentId,
+                    incidentDescription: description,
+                  ),
+                ),
+              );
+            },
+            child: const Text('Ver Cotizaciones'),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showOfflineSuccess() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Emergencia Guardada'),
+          ],
+        ),
+        content: const Text(
+          '⚠️ Modo sin conexión activo.\n\n'
+          'Su reporte se ha guardado localmente en el dispositivo. Se sincronizará y enviará automáticamente al servidor tan pronto como se recupere la conexión a internet.',
+        ),
+        actions: [
+          ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop(); // Cerrar Dialog
               Navigator.of(context).pop(); // Volver al Home

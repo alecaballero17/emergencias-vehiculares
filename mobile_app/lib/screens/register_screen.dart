@@ -18,9 +18,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isLoading = false;
+  List<dynamic> _tenants = [];
+  int? _selectedTenantId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTenants();
+  }
+
+  Future<void> _loadTenants() async {
+    final list = await _authService.getTenants();
+    if (mounted) {
+      setState(() {
+        _tenants = list;
+        if (list.isNotEmpty) {
+          _selectedTenantId = list.first['id'];
+        }
+      });
+    }
+  }
 
   Future<void> _register() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || _nameController.text.isEmpty) {
+    if (_emailController.text.isEmpty || 
+        _passwordController.text.isEmpty || 
+        _nameController.text.isEmpty || 
+        _selectedTenantId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor llena los campos obligatorios')),
       );
@@ -34,6 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       password: _passwordController.text,
       fullName: _nameController.text,
       phone: _phoneController.text,
+      tenantId: _selectedTenantId!,
     );
 
     if (mounted) {
@@ -78,7 +102,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
               delay: const Duration(milliseconds: 200),
               child: const Text('Únete a la red de emergencias vehiculares', style: TextStyle(color: AppTheme.textSecondary)),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
+            
+            if (_tenants.isNotEmpty) ...[
+              FadeInUp(
+                delay: const Duration(milliseconds: 300),
+                child: DropdownButtonFormField<int>(
+                  value: _selectedTenantId,
+                  dropdownColor: AppTheme.cardBg,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Red de Emergencias (Tenant)',
+                    prefixIcon: Icon(Icons.hub),
+                  ),
+                  items: _tenants.map<DropdownMenuItem<int>>((dynamic tenant) {
+                    return DropdownMenuItem<int>(
+                      value: tenant['id'] as int,
+                      child: Text(tenant['name'] as String),
+                    );
+                  }).toList(),
+                  onChanged: (int? value) {
+                    setState(() {
+                      _selectedTenantId = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
             
             FadeInUp(
               delay: const Duration(milliseconds: 400),

@@ -7,19 +7,20 @@ import '../core/api_constants.dart';
 class IncidentService {
   final Dio _dio = Dio();
 
-  Future<bool> reportIncident({
+  Future<Map<String, dynamic>?> reportIncident({
     required double latitude,
     required double longitude,
     int? vehicleId,
     String? description,
     String? audioPath,
     List<XFile>? imageFiles,
+    String? localUuid,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
-      if (token == null) return false;
+      if (token == null) return null;
 
       Map<String, dynamic> formDataMap = {
         'latitude': latitude,
@@ -27,6 +28,10 @@ class IncidentService {
         'vehicle_id': vehicleId,
         'description': description ?? 'Emergencia reportada desde App Móvil',
       };
+
+      if (localUuid != null) {
+        formDataMap['local_uuid'] = localUuid;
+      }
 
       if (audioPath != null) {
         if (kIsWeb) {
@@ -84,15 +89,81 @@ class IncidentService {
       );
 
       debugPrint('Respuesta del servidor: ${response.statusCode}');
-      return response.statusCode == 201;
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
     } catch (e) {
       if (e is DioException) {
         debugPrint('ERROR DE DIO: ${e.type} - ${e.message}');
         debugPrint('Datos de error: ${e.response?.data}');
+        if (e.response?.statusCode == 201 || e.response?.statusCode == 200) {
+          return e.response?.data;
+        }
       } else {
         debugPrint('Error desconocido reportando incidente: $e');
       }
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> getQuotations(int incidentId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return [];
+
+      final response = await _dio.get(
+        '${ApiConstants.baseUrl}/quotations/$incidentId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      debugPrint('Error obteniendo cotizaciones: $e');
+      return [];
+    }
+  }
+
+  Future<bool> acceptQuotation(int quotationId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.put(
+        '${ApiConstants.baseUrl}/quotations/$quotationId/accept',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error al aceptar cotización: $e');
       return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getCostEstimate(String description, {String? incidentType}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/ai/estimate-cost',
+        data: {
+          'description': description,
+          if (incidentType != null) 'incident_type': incidentType,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      return response.data;
+    } catch (e) {
+      debugPrint('Error al estimar costos con IA: $e');
+      return null;
     }
   }
 

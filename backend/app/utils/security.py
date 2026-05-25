@@ -25,6 +25,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Crea un JWT que incluye tenant_id para aislamiento multi-tenant."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
     to_encode.update({"exp": expire})
@@ -76,10 +77,11 @@ def get_current_entity(token: str = Depends(oauth2_scheme), db: Session = Depend
     payload = decode_token(token)
     role = payload.get("role")
     entity_id = payload.get("entity_id")
+    tenant_id = payload.get("tenant_id")
 
     if role == UserRole.WORKSHOP_ADMIN:
         entity = db.query(Workshop).filter(Workshop.id == entity_id).first()
-        return {"type": "workshop", "entity": entity, "role": role}
+        return {"type": "workshop", "entity": entity, "role": role, "tenant_id": tenant_id}
     else:
         entity = db.query(User).filter(User.id == entity_id).first()
-        return {"type": "user", "entity": entity, "role": role}
+        return {"type": "user", "entity": entity, "role": role, "tenant_id": tenant_id}

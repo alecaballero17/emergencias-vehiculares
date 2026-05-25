@@ -9,12 +9,14 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     role: str
+    tenant_id: int
 
 
 class TokenData(BaseModel):
     sub: str
     role: str
     entity_id: int
+    tenant_id: int
 
 
 class LoginRequest(BaseModel):
@@ -28,6 +30,7 @@ class UserCreate(BaseModel):
     password: str
     full_name: str
     phone: Optional[str] = None
+    tenant_id: int
 
 
 class UserUpdate(BaseModel):
@@ -38,6 +41,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
+    tenant_id: int
     email: str
     full_name: str
     phone: Optional[str]

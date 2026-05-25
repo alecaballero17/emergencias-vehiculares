@@ -1,0 +1,190 @@
+<div class="analytics-container">
+  <header class="analytics-header">
+    <div class="header-title">
+      <h1>📊 Analítica Operacional y KPIs</h1>
+      <p>Estadísticas del tenant calculadas en tiempo real a partir de datos reales de la plataforma.</p>
+    </div>
+    <button class="btn-refresh" (click)="loadAllData()">
+      <span>🔄</span> Recargar Datos
+    </button>
+  </header>
+
+  @if (loading) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Procesando analíticas de base de datos...</p>
+    </div>
+  } @else {
+    <!-- KPI Summary Grid -->
+    <section class="kpi-grid">
+      <!-- Card 1: Tiempo de asignación -->
+      <div class="kpi-card glass">
+        <div class="kpi-icon icon-assign">⚡</div>
+        <div class="kpi-content">
+          <h3>Tiempo Asignación</h3>
+          <div class="kpi-value">{{ assignmentTime.avg_minutes || 0 }} <span class="kpi-unit">min</span></div>
+          <p class="kpi-desc">{{ assignmentTime.detail || 'Tiempo promedio de asignación' }}</p>
+        </div>
+      </div>
+
+      <!-- Card 2: Tiempo de llegada -->
+      <div class="kpi-card glass">
+        <div class="kpi-icon icon-arrival">🚚</div>
+        <div class="kpi-content">
+          <h3>Tiempo Llegada</h3>
+          <div class="kpi-value">{{ arrivalTime.avg_minutes || 0 }} <span class="kpi-unit">min</span></div>
+          <p class="kpi-desc">{{ arrivalTime.detail || 'Tiempo promedio de llegada a destino' }}</p>
+        </div>
+      </div>
+
+      <!-- Card 3: SLA -->
+      <div class="kpi-card glass">
+        <div class="kpi-icon icon-sla">🎯</div>
+        <div class="kpi-content">
+          <h3>Cumplimiento SLA</h3>
+          <div class="kpi-value">{{ slaCompliance.sla_percent || 0 }}%</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar neon-cyan" [style.width.%]="slaCompliance.sla_percent || 0"></div>
+          </div>
+          <p class="kpi-desc">{{ slaCompliance.compliant }} de {{ slaCompliance.total }} servicios a tiempo</p>
+        </div>
+      </div>
+
+      <!-- Card 4: Resumen General -->
+      <div class="kpi-card glass">
+        <div class="kpi-icon icon-summary">📊</div>
+        <div class="kpi-content">
+          <h3>Tasa Finalización</h3>
+          <div class="kpi-value">{{ summary.completion_rate || 0 }}%</div>
+          <p class="kpi-desc">{{ summary.completed_incidents }} completados de {{ summary.total_incidents }} reportados</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizations Section -->
+    <div class="viz-grid">
+      <!-- Incident type chart -->
+      <div class="viz-card glass">
+        <h2>🏷️ Incidentes por Tipo</h2>
+        <div class="chart-container">
+          <div class="bar-chart-custom">
+            @for (item of incidentsByType; track item.type) {
+              <div class="bar-item">
+                <div class="bar-header">
+                  <span class="bar-label">{{ item.label }}</span>
+                  <span class="bar-value">{{ item.count }} ({{ getIncPercentage(item.count) | number:'1.0-1' }}%)</span>
+                </div>
+                <div class="progress-bar-container">
+                  <div 
+                    class="progress-bar" 
+                    [style.background-color]="pieColors[item.type] || '#888'"
+                    [style.width.%]="getIncPercentage(item.count)"
+                  ></div>
+                </div>
+              </div>
+            } @empty {
+              <p class="no-data">Sin incidentes registrados.</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Heatmap visualization -->
+      <div class="viz-card glass">
+        <h2>📍 Zonas de Mayor Incidencia</h2>
+        <p class="heatmap-subtitle">Visualización geográfica de los incidentes reportados en el área metropolitana.</p>
+        <div id="heatmap-container" class="heatmap-map"></div>
+      </div>
+    </div>
+
+    <!-- Rankings & Cancelations Section -->
+    <div class="tables-grid">
+      <!-- Workshops ranking -->
+      <div class="table-card glass">
+        <h2>🏆 Eficiencia de Talleres</h2>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Taller</th>
+                <th>Incidentes</th>
+                <th>Tasa Éxito</th>
+                <th>Respuesta Prom.</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ws of topWorkshops; track ws.workshop_id) {
+                <tr>
+                  <td class="bold-text">{{ ws.workshop_name }}</td>
+                  <td>{{ ws.total_incidents }}</td>
+                  <td>
+                    <div class="td-flex">
+                      <span class="badge-success">{{ ws.completion_rate }}%</span>
+                    </div>
+                  </td>
+                  <td>{{ ws.avg_response_minutes }} min</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="no-data">Sin datos de talleres.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cancelled cases kpis -->
+      <div class="table-card glass">
+        <h2>❌ Casos Cancelados y Expirados</h2>
+        <div class="cancelled-summary">
+          <div class="cancelled-stat">
+            <span class="stat-label">Cancelados:</span>
+            <span class="stat-value text-red">{{ cancelledCases.cancelled || 0 }}</span>
+          </div>
+          <div class="cancelled-stat">
+            <span class="stat-label">Expirados (> 2h sin taller):</span>
+            <span class="stat-value text-yellow">{{ cancelledCases.expired || 0 }}</span>
+          </div>
+          <div class="cancelled-stat">
+            <span class="stat-label">Tasa de Cancelación:</span>
+            <span class="stat-value text-orange">{{ cancelledCases.cancellation_rate || 0 }}%</span>
+          </div>
+        </div>
+        <h3 class="recent-title">Detalle de Cancelaciones Recientes</h3>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Caso</th>
+                <th>Tipo</th>
+                <th>Recargo</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of cancelledCases.recent_details; track item.incident_id) {
+                <tr>
+                  <td>#{{ item.incident_id }}</td>
+                  <td>{{ item.incident_type | titlecase }}</td>
+                  <td>
+                    @if (item.cancellation_fee) {
+                      <span class="text-red font-bold">Bs. {{ item.cancellation_fee }}</span>
+                    } @else {
+                      <span class="text-gray">Ninguno</span>
+                    }
+                  </td>
+                  <td>{{ item.cancelled_at | date:'shortTime' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="no-data">Sin cancelaciones recientes.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+</div>

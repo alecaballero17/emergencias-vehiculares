@@ -10,6 +10,7 @@ class Evidence(Base):
     __tablename__ = "evidences"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     incident_id = Column(Integer, ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False)
     evidence_type = Column(SAEnum(EvidenceType), nullable=False)
     file_url = Column(String(500), nullable=True)
