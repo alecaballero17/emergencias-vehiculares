@@ -62,7 +62,7 @@ async def get_reverse_geocoding(lat: float, lon: float) -> Optional[str]:
             
             return result.get("display_name")
     except Exception as e:
-        print(f"Error en Geocodificación Inversa: {e}")
+        print(f"Error en Geocodificacion Inversa: {e}")
     
     return None
 

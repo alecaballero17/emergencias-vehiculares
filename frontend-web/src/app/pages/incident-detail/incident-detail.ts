@@ -31,9 +31,15 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   // Formulario rechazar
   rejectReason: string = '';
 
+  // Formulario cotizar
+  quoteAmount: number | null = null;
+  quoteHours: number | null = null;
+  quoteDescription: string = '';
+
   showAcceptModal = false;
   showCompleteModal = false;
   showRejectModal = false;
+  showQuoteModal = false;
   actionLoading = false;
 
   readonly apiBase = environment.apiUrl.replace('/api', '');
@@ -115,8 +121,13 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   getStatusLabel(s: string): string {
     const map: Record<string, string> = {
-      pending: 'Pendiente', assigned: 'Asignado', in_progress: 'En Proceso',
-      completed: 'Completado', cancelled: 'Cancelado'
+      pendiente: 'Pendiente',
+      buscando_taller: 'Buscando Cotizaciones',
+      taller_asignado: 'Taller Asignado',
+      en_camino: 'En Camino',
+      en_atencion: 'En Atención',
+      finalizado: 'Completado',
+      cancelado: 'Cancelado'
     };
     return map[s] || s;
   }
@@ -265,6 +276,52 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.error = err.error?.detail || 'Error al completar';
+        this.actionLoading = false;
+      }
+    });
+  }
+
+  sendQuotation(): void {
+    if (!this.incident || this.quoteAmount === null || this.quoteHours === null) return;
+    this.actionLoading = true;
+    this.ws.sendQuotation(this.incident.id, this.quoteAmount, this.quoteHours, this.quoteDescription).subscribe({
+      next: () => {
+        this.showQuoteModal = false;
+        this.actionLoading = false;
+        this.loadIncident(this.incident!.id);
+      },
+      error: (err) => {
+        this.error = err.error?.detail || 'Error al enviar cotización';
+        this.actionLoading = false;
+      }
+    });
+  }
+
+  markEnRoute(): void {
+    if (!this.incident) return;
+    this.actionLoading = true;
+    this.ws.markEnRoute(this.incident.id).subscribe({
+      next: () => {
+        this.actionLoading = false;
+        this.loadIncident(this.incident!.id);
+      },
+      error: (err) => {
+        this.error = err.error?.detail || 'Error al iniciar viaje';
+        this.actionLoading = false;
+      }
+    });
+  }
+
+  markArrived(): void {
+    if (!this.incident) return;
+    this.actionLoading = true;
+    this.ws.markArrived(this.incident.id).subscribe({
+      next: () => {
+        this.actionLoading = false;
+        this.loadIncident(this.incident!.id);
+      },
+      error: (err) => {
+        this.error = err.error?.detail || 'Error al reportar llegada';
         this.actionLoading = false;
       }
     });

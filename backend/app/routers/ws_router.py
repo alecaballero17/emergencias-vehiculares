@@ -23,6 +23,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     - {"type": "location_update", "incident_id": 123, "latitude": -17.78, "longitude": -63.18, "eta_minutes": 10}
     - {"type": "ping"}
     """
+    entity_type = None
+    entity_id = None
     try:
         # Autenticar con JWT
         payload = decode_token(token)
@@ -89,10 +91,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                 await websocket.send_json({"type": "error", "message": "JSON inválido"})
 
     except WebSocketDisconnect:
-        ws_manager.disconnect(entity_type, entity_id)
-    except Exception as e:
-        print(f"[WS] Error en conexión: {e}")
-        try:
+        if entity_type and entity_id:
             ws_manager.disconnect(entity_type, entity_id)
-        except Exception:
-            pass
+    except Exception as e:
+        print(f"[WS] Error en conexion: {e}")
+        if entity_type and entity_id:
+            try:
+                ws_manager.disconnect(entity_type, entity_id)
+            except Exception:
+                pass

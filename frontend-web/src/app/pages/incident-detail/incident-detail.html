@@ -39,12 +39,19 @@
         </div>
       </div>
       <div class="header-actions">
-        @if (incident.status === 'pending' || incident.status === 'assigned') {
-          <button class="btn btn-success" (click)="showAcceptModal = true">Aceptar Servicio</button>
+        @if (incident.status === 'buscando_taller' || incident.status === 'pendiente') {
+          <button class="btn btn-primary" (click)="showQuoteModal = true">💰 Enviar Cotización</button>
+          <button class="btn btn-outline" (click)="showAcceptModal = true">Aceptar Directo</button>
           <button class="btn btn-ghost" (click)="showRejectModal = true" style="color: var(--danger-500)">Rechazar</button>
         }
-        @if (incident.status === 'in_progress') {
-          <button class="btn btn-success" (click)="showCompleteModal = true">Finalizar y Cobrar</button>
+        @if (incident.status === 'taller_asignado') {
+          <button class="btn btn-success" (click)="markEnRoute()">🚗 Iniciar Viaje (En camino)</button>
+        }
+        @if (incident.status === 'en_camino') {
+          <button class="btn btn-warning" (click)="markArrived()">📍 Reportar Llegada</button>
+        }
+        @if (incident.status === 'en_atencion') {
+          <button class="btn btn-success" (click)="showCompleteModal = true">✅ Finalizar y Cobrar</button>
         }
       </div>
     </div>
@@ -354,6 +361,37 @@
             <button class="btn btn-ghost" (click)="showCompleteModal = false">Volver</button>
             <button class="btn btn-primary" (click)="completeIncident()" [disabled]="actionLoading || !finalCost || finalCost <= 0">
               {{ actionLoading ? 'Guardando...' : 'Completar y Cobrar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showQuoteModal) {
+      <div class="modal-overlay" (click)="showQuoteModal = false">
+        <div class="modal-content animate-in" (click)="$event.stopPropagation()">
+          <h3>💰 Enviar Cotización de Servicio</h3>
+          <p>Ofrece tu propuesta de precio y tiempo estimado para esta emergencia.</p>
+          
+          <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+            <div class="form-group">
+              <label>Costo del servicio (Bs.)</label>
+              <input type="number" [(ngModel)]="quoteAmount" class="form-input" min="0" step="1" placeholder="Ej. 150">
+            </div>
+            <div class="form-group">
+              <label>Tiempo estimado de llegada (Horas)</label>
+              <input type="number" [(ngModel)]="quoteHours" class="form-input" min="0.1" step="0.1" placeholder="Ej. 0.5">
+            </div>
+            <div class="form-group">
+              <label>Notas / Diagnóstico inicial</label>
+              <textarea [(ngModel)]="quoteDescription" class="form-input" style="min-height: 100px;" placeholder="Detalles de lo que realizarás..."></textarea>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
+            <button class="btn btn-ghost" (click)="showQuoteModal = false">Cancelar</button>
+            <button class="btn btn-primary" (click)="sendQuotation()" [disabled]="actionLoading || !quoteAmount || !quoteHours">
+              {{ actionLoading ? 'Enviando...' : 'Enviar Oferta' }}
             </button>
           </div>
         </div>

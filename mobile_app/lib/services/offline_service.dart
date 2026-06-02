@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'incident_service.dart';
 import 'connectivity_service.dart';
+import 'local_notification_service.dart';
 
 class OfflineService {
   static OfflineService? _instance;
@@ -111,6 +112,13 @@ class OfflineService {
           debugPrint("[OfflineService] Incidente $id sincronizado exitosamente!");
           item['sync_status'] = 'synced';
           await _box.delete(id); 
+
+          // Notificar al usuario nativamente
+          await LocalNotificationService().showNotification(
+            id: id.hashCode,
+            title: '🚨 Reporte Sincronizado',
+            body: 'Tu emergencia guardada offline se ha enviado al servidor con éxito.',
+          );
         } else {
           throw Exception("El servidor no devolvió respuesta");
         }
@@ -118,9 +126,21 @@ class OfflineService {
         debugPrint("[OfflineService] Error sincronizando incidente $id: $e");
         item['sync_status'] = 'error';
         await _box.put(id, item);
+
+        // Notificar el fallo nativamente
+        await LocalNotificationService().showNotification(
+          id: id.hashCode,
+          title: '⚠️ Error de Sincronización',
+          body: 'No pudimos enviar tu reporte offline. Se reintentará cuando la conexión sea estable.',
+        );
       }
     }
 
     _isSyncing = false;
+  }
+
+  Future<void> deleteOfflineIncident(String id) async {
+    await _box.delete(id);
+    debugPrint("[OfflineService] Incidente offline eliminado localmente: $id");
   }
 }

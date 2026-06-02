@@ -41,8 +41,8 @@ export class DashboardComponent implements OnInit {
       next: (incidents) => {
         const safeInc = incidents || [];
         this.recentIncidents = safeInc.slice(0, 5);
-        this.activeCount = safeInc.filter(i => i.status === 'in_progress' || i.status === 'assigned').length;
-        this.completedCount = safeInc.filter(i => i.status === 'completed').length;
+        this.activeCount = safeInc.filter(i => i.status === 'taller_asignado' || i.status === 'en_camino' || i.status === 'en_atencion').length;
+        this.completedCount = safeInc.filter(i => i.status === 'finalizado').length;
         this.loading = false;
         this.cd.detectChanges();
       },
@@ -72,11 +72,13 @@ export class DashboardComponent implements OnInit {
 
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
-      pending: 'Pendiente',
-      assigned: 'Asignado',
-      in_progress: 'En Proceso',
-      completed: 'Completado',
-      cancelled: 'Cancelado'
+      pendiente: 'Pendiente',
+      buscando_taller: 'Buscando Cotizaciones',
+      taller_asignado: 'Taller Asignado',
+      en_camino: 'En Camino',
+      en_atencion: 'En Atención',
+      finalizado: 'Completado',
+      cancelado: 'Cancelado'
     };
     return map[status] || status;
   }

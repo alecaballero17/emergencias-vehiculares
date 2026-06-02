@@ -175,7 +175,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                                 'Bs. ${_aiEstimate!['min_cost']} - Bs. ${_aiEstimate!['max_cost']}',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.extrabold,
+                                  fontWeight: FontWeight.w800,
                                   fontSize: 22,
                                   letterSpacing: 0.5,
                                 ),
@@ -263,7 +263,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                                         'Bs. $amount',
                                         style: const TextStyle(
                                           color: AppTheme.primaryNeon,
-                                          fontWeight: FontWeight.extrabold,
+                                          fontWeight: FontWeight.w800,
                                           fontSize: 18,
                                         ),
                                       ),

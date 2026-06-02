@@ -281,7 +281,9 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
           children: [
             Icon(Icons.wifi_off, color: Colors.orange),
             SizedBox(width: 10),
-            Text('Emergencia Guardada'),
+            Expanded(
+              child: Text('Emergencia Guardada'),
+            ),
           ],
         ),
         content: const Text(

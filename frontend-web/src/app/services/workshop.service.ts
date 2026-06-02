@@ -63,6 +63,23 @@ export class WorkshopService {
     return this.http.put(`${this.api}/workshops/incidents/${id}/complete`, { final_cost: cost, notes });
   }
 
+  // === Cotizaciones & Fase 2 Transiciones ===
+  sendQuotation(incidentId: number, amount: number, hours: number, description: string): Observable<any> {
+    return this.http.post(`${this.api}/quotations/${incidentId}`, {
+      amount,
+      estimated_repair_hours: hours,
+      description
+    });
+  }
+
+  markEnRoute(id: number): Observable<any> {
+    return this.http.put(`${this.api}/workshops/incidents/${id}/en-route`, {});
+  }
+
+  markArrived(id: number): Observable<any> {
+    return this.http.put(`${this.api}/workshops/incidents/${id}/arrive`, {});
+  }
+
   // === Notificaciones ===
   getNotifications(unreadOnly = false): Observable<Notification[]> {
     let params = new HttpParams();

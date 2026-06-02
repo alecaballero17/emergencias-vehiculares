@@ -10,6 +10,7 @@ import 'login_screen.dart';
 import 'report_incident_screen.dart';
 import 'incident_detail_screen.dart';
 import 'incident_history_screen.dart';
+import 'offline_incidents_screen.dart';
 import 'profile_screen.dart';
 import 'vehicle_form_screen.dart';
 import '../services/auth_service.dart';
@@ -161,6 +162,13 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.history, color: AppTheme.accentNeon),
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const IncidentHistoryScreen()));
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.cloud_off, color: Colors.orangeAccent),
+            tooltip: 'Cola de sincronización',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const OfflineIncidentsScreen()));
             },
           ),
           IconButton(
