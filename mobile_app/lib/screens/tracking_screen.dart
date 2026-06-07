@@ -33,6 +33,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
   // Google Maps Controller
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
+
+  // Simulación de movimiento del mecánico en tiempo real
+  Timer? _simulationTimer;
+  double _simulationProgress = 0.0;
   
   @override
   void initState() {
@@ -43,6 +47,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   @override
   void dispose() {
+    _simulationTimer?.cancel();
     _wsService.unsubscribeIncident(widget.incidentId);
     _wsService.disconnect();
     super.dispose();
@@ -67,10 +72,56 @@ class _TrackingScreenState extends State<TrackingScreen> {
           _isLoading = false;
         });
         _updateMarkers();
+
+        if (_status == 'en_camino') {
+          _startSimulation();
+        }
       }
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _startSimulation() {
+    _simulationTimer?.cancel();
+    _simulationProgress = 0.0;
+
+    // Punto de partida: un offset desde la ubicación del usuario (ej: ~1.5 km al noreste)
+    final double startLat = _userLocation.latitude + 0.008;
+    final double startLng = _userLocation.longitude + 0.008;
+
+    setState(() {
+      _mechanicLocation = LatLng(startLat, startLng);
+      _etaMinutes = 10;
+    });
+    _updateMarkers();
+
+    // Actualizar ubicación simulada cada 4 segundos moviéndose hacia el usuario
+    _simulationTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_status != 'en_camino') {
+        timer.cancel();
+        return;
+      }
+
+      _simulationProgress += 0.05; // 20 pasos de 4s (total 80s de recorrido)
+      if (_simulationProgress >= 1.0) {
+        _simulationProgress = 1.0;
+        timer.cancel();
+      }
+
+      final double currentLat = startLat + (_userLocation.latitude - startLat) * _simulationProgress;
+      final double currentLng = startLng + (_userLocation.longitude - startLng) * _simulationProgress;
+
+      if (mounted) {
+        setState(() {
+          _mechanicLocation = LatLng(currentLat, currentLng);
+          _etaMinutes = (10 * (1.0 - _simulationProgress)).round();
+          if (_etaMinutes! < 1) _etaMinutes = 1;
+        });
+        _updateMarkers();
+        _animateToLocation(LatLng(currentLat, currentLng));
+      }
+    });
   }
 
   void _initWebSocket() async {
@@ -90,10 +141,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
           });
           _updateMarkers();
 
+          if (_status == 'en_camino') {
+            _startSimulation();
+          } else {
+            _simulationTimer?.cancel();
+          }
+
           if (_status == 'finalizado' || _status == 'cancelado') {
             _showEndDialog(_status);
           }
         } else if (msg['type'] == 'location_update') {
+          // Desactivar simulación local si llega una actualización real del backend
+          _simulationTimer?.cancel();
           final lat = msg['latitude'] as double;
           final lng = msg['longitude'] as double;
           setState(() {
