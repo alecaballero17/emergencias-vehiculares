@@ -67,9 +67,13 @@ def list_my_incidents(
     current_user: User = Depends(get_current_user),
 ):
     """Listar incidentes del usuario actual (filtrado por tenant)."""
-    query = db.query(Incident).filter(
-        Incident.user_id == current_user.id,
-        Incident.tenant_id == current_user.tenant_id,
+    query = (
+        db.query(Incident)
+        .options(joinedload(Incident.payment))
+        .filter(
+            Incident.user_id == current_user.id,
+            Incident.tenant_id == current_user.tenant_id,
+        )
     )
     if status:
         query = query.filter(Incident.status == status)

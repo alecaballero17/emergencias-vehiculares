@@ -119,10 +119,13 @@ def list_workshop_incidents(
     db: Session = Depends(get_db),
     current_workshop: Workshop = Depends(get_current_workshop),
 ):
-    """Ver solicitudes asignadas al taller (filtrado por tenant)."""
-    query = db.query(Incident).filter(
-        Incident.workshop_id == current_workshop.id,
-        Incident.tenant_id == current_workshop.tenant_id,
+    query = (
+        db.query(Incident)
+        .options(joinedload(Incident.payment))
+        .filter(
+            Incident.workshop_id == current_workshop.id,
+            Incident.tenant_id == current_workshop.tenant_id,
+        )
     )
     if status:
         query = query.filter(Incident.status == status)

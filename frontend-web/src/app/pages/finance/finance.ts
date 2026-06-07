@@ -67,8 +67,8 @@ export class FinanceComponent implements OnInit {
   }
 
   private processFinanceData(incidents: Incident[]): void {
-    const completed = incidents.filter(i => i.status === 'completed' && i.final_cost);
-    const pending = incidents.filter(i => i.status === 'in_progress' || i.status === 'assigned');
+    const completed = incidents.filter(i => i.status === 'finalizado' && i.final_cost);
+    const pending = incidents.filter(i => i.status === 'en_camino' || i.status === 'en_atencion' || i.status === 'taller_asignado');
 
     this.records = completed.map(inc => {
       const amount = inc.final_cost || 0;

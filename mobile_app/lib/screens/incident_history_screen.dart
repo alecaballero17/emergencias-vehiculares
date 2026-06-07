@@ -68,11 +68,13 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
 
   String _getStatusLabel(String status) {
     switch (status) {
-      case 'pending': return 'PENDIENTE';
-      case 'assigned': return 'ASIGNADO';
-      case 'in_progress': return 'EN PROCESO';
-      case 'completed': return 'COMPLETADO';
-      case 'cancelled': return 'CANCELADO';
+      case 'pendiente': return 'PENDIENTE';
+      case 'buscando_taller': return 'BUSCANDO TALLER';
+      case 'taller_asignado': return 'TALLER ASIGNADO';
+      case 'en_camino': return 'MECÁNICO EN CAMINO';
+      case 'en_atencion': return 'EN ATENCIÓN';
+      case 'finalizado': return 'FINALIZADO';
+      case 'cancelado': return 'CANCELADO';
       default: return status.toUpperCase();
     }
   }
@@ -93,7 +95,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                   itemBuilder: (context, index) {
                     final item = _incidents[index];
                     final date = DateTime.parse(item['created_at']).toLocal();
-                    final status = item['status']?.toString() ?? 'pending';
+                    final status = item['status']?.toString() ?? 'pendiente';
                     
                     return FadeInUp(
                       delay: Duration(milliseconds: 50 * index),
@@ -101,7 +103,7 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
                         margin: const EdgeInsets.only(bottom: 15),
                         child: ListTile(
                           onTap: () async {
-                            final result = await Navigator.push(
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => IncidentDetailScreen(incidentId: item['id']),
@@ -151,11 +153,13 @@ class _IncidentHistoryScreenState extends State<IncidentHistoryScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'completed': return Colors.greenAccent;
-      case 'cancelled': return Colors.grey;
-      case 'pending': return AppTheme.accentNeon;
-      case 'assigned': return Colors.cyan;
-      case 'in_progress': return Colors.orangeAccent;
+      case 'pendiente': return AppTheme.accentNeon;
+      case 'buscando_taller': return Colors.amber;
+      case 'taller_asignado': return Colors.cyan;
+      case 'en_camino': return Colors.orangeAccent;
+      case 'en_atencion': return Colors.purpleAccent;
+      case 'finalizado': return Colors.greenAccent;
+      case 'cancelado': return Colors.grey;
       default: return Colors.orangeAccent;
     }
   }

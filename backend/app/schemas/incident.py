@@ -155,6 +155,7 @@ class IncidentResponse(BaseModel):
     attending_at: Optional[datetime]
     completed_at: Optional[datetime]
     cancelled_at: Optional[datetime]
+    payment: Optional[PaymentResponse] = None
 
     model_config = {"from_attributes": True}
 
@@ -165,7 +166,6 @@ from app.schemas.workshop import WorkshopResponse
 class IncidentDetail(IncidentResponse):
     evidences: list[EvidenceResponse] = []
     status_history: list[ServiceHistoryResponse] = []
-    payment: Optional[PaymentResponse] = None
     quotations: list[QuotationResponse] = []
     workshop: Optional[WorkshopResponse] = None
 

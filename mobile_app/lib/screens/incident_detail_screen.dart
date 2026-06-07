@@ -614,7 +614,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_incident == null) return const Scaffold(body: Center(child: Text('Error al cargar detalle')));
 
-    final status = _incident!['status'] ?? 'pending';
+    final status = _incident!['status'] ?? 'pendiente';
     final aiSummary = _incident!['ai_summary'] ?? 'Procesando análisis de IA...';
     final workshopId = _incident!['workshop_id'];
     final technicianId = _incident!['technician_id'];
@@ -647,7 +647,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                 child: Column(
                   children: [
                     Icon(
-                      status == 'completed' ? Icons.check_circle : Icons.sync,
+                      status == 'finalizado' ? Icons.check_circle : Icons.sync,
                       color: _getStatusColor(status),
                       size: 40,
                     ),
@@ -820,19 +820,19 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
             ),
             _buildTimelineItem(
               'En Proceso',
-              status == 'in_progress' ? 'Técnico en camino' : 'Pendiente',
-              status == 'in_progress' || status == 'completed',
+              (status == 'en_camino' || status == 'en_atencion' || status == 'finalizado') ? (status == 'en_camino' ? 'Técnico en camino' : 'Técnico en lugar') : 'Pendiente',
+              status == 'en_camino' || status == 'en_atencion' || status == 'finalizado',
             ),
             _buildTimelineItem(
               'Completado',
-              status == 'completed' ? 'Servicio finalizado' : 'Pendiente',
-              status == 'completed',
+              status == 'finalizado' ? 'Servicio finalizado' : 'Pendiente',
+              status == 'finalizado',
             ),
 
             const SizedBox(height: 30),
 
             // Sección de Pago (cuando el taller completó y puso precio)
-            if (status == 'completed' && finalCost != null && (finalCost as num) > 0) ...[
+            if (status == 'finalizado' && finalCost != null && (finalCost as num) > 0) ...[
               FadeInUp(
                 child: Container(
                   width: double.infinity,

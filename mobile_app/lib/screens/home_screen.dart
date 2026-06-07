@@ -60,20 +60,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final status = last['status'].toString().toLowerCase();
       
       // Si el estado cambió (o es el primer incidente asignado en una cuenta nueva)
-      bool isFirstAssignment = (_lastKnownStatus == null && (status == 'assigned' || status == 'in_progress'));
+      bool isFirstAssignment = (_lastKnownStatus == null && (status == 'taller_asignado' || status == 'en_camino'));
       bool isStatusChange = (_lastKnownStatus != null && _lastKnownStatus != status);
 
       if (isFirstAssignment || isStatusChange) {
         final int uniqueNotifId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-        if (status == 'assigned') {
+        if (status == 'taller_asignado') {
           _notificationService.showNotification(
             id: uniqueNotifId, 
             title: '¡Taller Asignado! 🔧', 
             body: 'Un taller ha aceptado tu emergencia. Pronto despacharán a un técnico.'
           );
           _showInAppNotification('¡Taller Asignado! 🔧', 'Un taller ha aceptado tu emergencia.', Colors.blue);
-        } else if (status == 'in_progress') {
+        } else if (status == 'en_camino') {
           final eta = last['estimated_arrival_minutes'];
           final etaText = eta != null ? ' Tiempo estimado: $eta minutos.' : '';
           _notificationService.showNotification(
@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
             body: 'El taller ha despachado al mecánico. ¡Pronto estará contigo!$etaText'
           );
           _showInAppNotification('¡Técnico en camino! 🚗', 'El mecánico va en camino.$etaText', Colors.orange);
-        } else if (status == 'completed') {
+        } else if (status == 'finalizado') {
           _notificationService.showNotification(
             id: uniqueNotifId + 2, 
             title: '¡Servicio Finalizado! ✅', 
@@ -94,7 +94,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          if (status.contains('pending') || status.contains('assigned') || status.contains('in_progress')) {
+          final isPaid = last['payment'] != null;
+          if (status == 'pendiente' ||
+              status == 'buscando_taller' ||
+              status == 'taller_asignado' ||
+              status == 'en_camino' ||
+              status == 'en_atencion' ||
+              (status == 'finalizado' && !isPaid)) {
             _activeIncident = last;
           } else {
             _activeIncident = null; // Ya no hay incidente activo
