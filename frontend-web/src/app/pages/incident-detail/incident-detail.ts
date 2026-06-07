@@ -1,15 +1,16 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { WorkshopService } from '../../services/workshop.service';
+import { WebSocketService } from '../../services/websocket.service';
 import { IncidentDetail, Technician } from '../../models/interfaces';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './incident-detail.html',
   styleUrl: './incident-detail.scss'
 })
@@ -20,6 +21,16 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   error = '';
   
   private pollingInterval: any;
+
+  // Mapa y Simulación GPS
+  private map: any;
+  private userMarker: any;
+  private mechanicMarker: any;
+  private simulationInterval: any;
+  private simulationProgress = 0.0;
+  
+  mechanicLat: number | null = null;
+  mechanicLng: number | null = null;
 
   // Formulario aceptar
   selectedTechId: number | null = null;
@@ -60,12 +71,37 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private ws: WorkshopService,
+    private wsService: WebSocketService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loadIncident(id);
+    
+    // Conectar WebSocket y suscribirse
+    this.wsService.connect();
+    this.wsService.subscribeIncident(id);
+    
+    this.wsService.messages$.subscribe(msg => {
+      if (this.incident && msg.incident_id === this.incident.id) {
+        if (msg.type === 'location_update') {
+          this.mechanicLat = msg.latitude;
+          this.mechanicLng = msg.longitude;
+          this.updateMapMarkers();
+        } else if (msg.type === 'status_change') {
+          this.incident.status = msg.new_status;
+          this.cdr.detectChanges();
+          
+          if (msg.new_status === 'en_camino') {
+            this.startSimulation();
+          } else {
+            this.stopSimulation();
+          }
+        }
+      }
+    });
+
     this.ws.getTechnicians().subscribe(t => {
       this.technicians = t.filter(x => x.is_available);
       this.cdr.detectChanges();
@@ -81,6 +117,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
     }
+    this.wsService.disconnect();
+    this.stopSimulation();
   }
 
   loadIncident(id: number): void {
@@ -90,6 +128,16 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         this.incident = data; 
         this.loading = false; 
         this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.loadLeaflet();
+        }, 150);
+
+        if (this.incident.status === 'en_camino') {
+          this.startSimulation();
+        } else {
+          this.stopSimulation();
+        }
       },
       error: (err) => { 
         this.error = 'No se pudo cargar el incidente'; 
@@ -105,6 +153,17 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       next: (data) => { 
         this.incident = data; 
         this.cdr.detectChanges();
+        
+        // Intentar inicializar el mapa si el contenedor no estaba listo en la carga inicial
+        if (!this.map) {
+          this.loadLeaflet();
+        }
+
+        if (this.incident.status === 'en_camino') {
+          this.startSimulation();
+        } else {
+          this.stopSimulation();
+        }
       }
     });
   }
@@ -325,5 +384,139 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         this.actionLoading = false;
       }
     });
+  }
+
+  // --- Leaflet Map & Simulation ---
+  loadLeaflet(): void {
+    if ((window as any).L) {
+      this.initMap();
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => this.initMap();
+    document.body.appendChild(script);
+  }
+
+  initMap(): void {
+    const L = (window as any).L;
+    if (!L || !this.incident) return;
+
+    const container = document.getElementById('web-map-container');
+    if (!container) return;
+
+    if ((container as any)._leaflet_id) {
+      return;
+    }
+
+    this.map = L.map('web-map-container').setView([this.incident.latitude, this.incident.longitude], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(this.map);
+
+    // Icono azul para el incidente
+    const blueIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    this.userMarker = L.marker([this.incident.latitude, this.incident.longitude], { icon: blueIcon })
+      .addTo(this.map)
+      .bindPopup('Ubicación de la Emergencia')
+      .openPopup();
+
+    this.updateMapMarkers();
+  }
+
+  updateMapMarkers(): void {
+    const L = (window as any).L;
+    if (!L || !this.map) return;
+
+    if (this.mechanicLat && this.mechanicLng) {
+      const orangeIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      if (this.mechanicMarker) {
+        this.mechanicMarker.setLatLng([this.mechanicLat, this.mechanicLng]);
+      } else {
+        this.mechanicMarker = L.marker([this.mechanicLat, this.mechanicLng], { icon: orangeIcon })
+          .addTo(this.map)
+          .bindPopup('Mecánico en Camino');
+      }
+
+      // Auto-centrar mostrando ambos marcadores
+      const bounds = L.latLngBounds([
+        [this.incident!.latitude, this.incident!.longitude],
+        [this.mechanicLat, this.mechanicLng]
+      ]);
+      this.map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (this.mechanicMarker) {
+      this.map.removeLayer(this.mechanicMarker);
+      this.mechanicMarker = null;
+    }
+  }
+
+  startSimulation(): void {
+    if (this.simulationInterval || !this.incident) return;
+    this.simulationProgress = 0.0;
+
+    // Partir de un offset de ~1.5 km
+    const startLat = this.incident.latitude + 0.008;
+    const startLng = this.incident.longitude + 0.008;
+
+    this.mechanicLat = startLat;
+    this.mechanicLng = startLng;
+
+    setTimeout(() => {
+      this.loadLeaflet();
+    }, 200);
+
+    // Mover el marcador de mecánico en la web y emitir actualización via WebSocket
+    this.simulationInterval = setInterval(() => {
+      if (!this.incident || this.incident.status !== 'en_camino') {
+        this.stopSimulation();
+        return;
+      }
+
+      this.simulationProgress += 0.05; // 20 pasos de 4s (total 80s)
+      if (this.simulationProgress >= 1.0) {
+        this.simulationProgress = 1.0;
+        this.stopSimulation();
+      }
+
+      const currentLat = startLat + (this.incident.latitude - startLat) * this.simulationProgress;
+      const currentLng = startLng + (this.incident.longitude - startLng) * this.simulationProgress;
+
+      this.mechanicLat = currentLat;
+      this.mechanicLng = currentLng;
+      this.updateMapMarkers();
+
+      // Emitir al backend a través del WebSocket
+      const eta = Math.round(10 * (1.0 - this.simulationProgress));
+      this.wsService.sendLocationUpdate(this.incident.id, currentLat, currentLng, eta > 0 ? eta : 1);
+    }, 4000);
+  }
+
+  stopSimulation(): void {
+    if (this.simulationInterval) {
+      clearInterval(this.simulationInterval);
+      this.simulationInterval = null;
+    }
   }
 }
