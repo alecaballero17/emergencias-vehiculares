@@ -159,11 +159,15 @@ class IncidentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+from app.schemas.workshop import WorkshopResponse
+
+
 class IncidentDetail(IncidentResponse):
     evidences: list[EvidenceResponse] = []
     status_history: list[ServiceHistoryResponse] = []
     payment: Optional[PaymentResponse] = None
     quotations: list[QuotationResponse] = []
+    workshop: Optional[WorkshopResponse] = None
 
 
 # --- AI Analysis Result ---

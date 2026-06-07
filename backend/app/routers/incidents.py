@@ -90,6 +90,7 @@ def get_incident_detail(
             joinedload(Incident.status_history),
             joinedload(Incident.payment),
             joinedload(Incident.quotations),
+            joinedload(Incident.workshop),
         )
         .filter(
             Incident.id == incident_id,
