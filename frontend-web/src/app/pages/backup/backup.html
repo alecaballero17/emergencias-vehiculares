@@ -1,0 +1,80 @@
+<div class="page animate-in">
+  <div class="page-header">
+    <div>
+      <h2>Administración de Base de Datos</h2>
+      <p class="text-secondary">Exporta e importa copias de seguridad completas de toda la plataforma multitenant.</p>
+    </div>
+  </div>
+
+  @if (message) {
+    <div class="badge" [class.badge-success]="messageType === 'success'" [class.badge-danger]="messageType === 'danger'" style="padding: 12px 18px; margin-bottom: 24px; border-radius: var(--radius-md); font-size: 13px; display: block; text-transform: none;">
+      <span>{{ messageType === 'success' ? '✅' : '❌' }}</span> {{ message }}
+    </div>
+  }
+
+  <div class="backup-grid">
+    <!-- Export Card -->
+    <div class="card card-glow card-hover">
+      <div class="card-icon">💾</div>
+      <h3 class="card-title">Copia de Seguridad (Exportar)</h3>
+      <p class="card-desc">
+        Descarga una copia completa de toda la base de datos (tenants, usuarios, talleres, incidentes, historiales, etc.) en un archivo JSON encriptado/estructurado listo para restaurar.
+      </p>
+      <button 
+        class="btn btn-primary" 
+        (click)="exportBackup()" 
+        [disabled]="exporting || importing"
+      >
+        @if (exporting) {
+          <span class="spinner">⏳</span> Exportando...
+        } @else {
+          <span>💾 Descargar Backup</span>
+        }
+      </button>
+    </div>
+
+    <!-- Import Card -->
+    <div class="card card-glow card-hover">
+      <div class="card-icon">📤</div>
+      <h3 class="card-title">Restaurar Sistema (Importar)</h3>
+      <p class="card-desc">
+        Sube un archivo de copia de seguridad JSON previamente exportado. Esta acción limpiará la base de datos actual e importará todos los registros intactos.
+      </p>
+      
+      <div class="file-upload-zone">
+        <input 
+          type="file" 
+          id="backupFile" 
+          accept=".json" 
+          (change)="onFileSelected($event)" 
+          style="display: none;"
+        />
+        <label for="backupFile" class="btn btn-ghost btn-sm" style="margin-bottom: 12px; display: inline-flex;">
+          📂 Seleccionar Archivo
+        </label>
+        
+        @if (selectedFile) {
+          <div class="selected-file-info">
+            <span>📄 {{ selectedFile.name }}</span>
+            <span class="file-size">({{ (selectedFile.size / 1024).toFixed(1) }} KB)</span>
+          </div>
+        } @else {
+          <div class="selected-file-info muted">Ningún archivo seleccionado</div>
+        }
+      </div>
+
+      <button 
+        class="btn btn-danger" 
+        (click)="importBackup()" 
+        [disabled]="!selectedFile || importing || exporting"
+        style="width: 100%; justify-content: center;"
+      >
+        @if (importing) {
+          <span class="spinner">⏳</span> Restaurando...
+        } @else {
+          <span>⚠️ Restaurar Base de Datos</span>
+        }
+      </button>
+    </div>
+  </div>
+</div>

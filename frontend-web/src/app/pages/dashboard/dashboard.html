@@ -1,20 +1,20 @@
 <div class="dashboard">
-  <div class="page-header">
-    <h2>Dashboard</h2>
-    <span class="page-subtitle">Resumen de actividad del taller</span>
+  <div class="page-header animate-in">
+    <h2>Analítica Operacional & KPIs</h2>
+    <span class="page-subtitle">Indicadores calculados en tiempo real desde datos reales del Tenant</span>
   </div>
 
-  <!-- Stats Grid -->
+  <!-- Real-time KPIs Stat Cards -->
   <div class="stats-grid">
     <div class="stat-card animate-in">
       <div class="stat-accent accent-available"></div>
       <div class="stat-body">
         <div class="stat-header">
-          <span class="stat-icon">🆘</span>
-          <span class="stat-trend">Nuevos</span>
+          <span class="stat-icon">📅</span>
+          <span class="stat-trend">Total</span>
         </div>
-        <div class="stat-value">{{ availableCount }}</div>
-        <div class="stat-label">Disponibles</div>
+        <div class="stat-value">{{ totalIncidentsCount }}</div>
+        <div class="stat-label">Incidentes Totales</div>
       </div>
     </div>
 
@@ -23,10 +23,10 @@
       <div class="stat-body">
         <div class="stat-header">
           <span class="stat-icon">⚡</span>
-          <span class="stat-trend">En curso</span>
+          <span class="stat-trend">Cumplimiento</span>
         </div>
-        <div class="stat-value">{{ activeCount }}</div>
-        <div class="stat-label">Activos</div>
+        <div class="stat-value">{{ slaCompliancePercent }}%</div>
+        <div class="stat-label">Nivel de SLA</div>
       </div>
     </div>
 
@@ -35,20 +35,176 @@
       <div class="stat-body">
         <div class="stat-header">
           <span class="stat-icon">✅</span>
-          <span class="stat-trend">Total</span>
+          <span class="stat-trend">Resueltos</span>
         </div>
         <div class="stat-value">{{ completedCount }}</div>
         <div class="stat-label">Completados</div>
       </div>
     </div>
+
+    <div class="stat-card animate-in">
+      <div class="stat-accent accent-cancelled"></div>
+      <div class="stat-body">
+        <div class="stat-header">
+          <span class="stat-icon">❌</span>
+          <span class="stat-trend">Cancelación</span>
+        </div>
+        <div class="stat-value text-red">{{ cancellationRatePercent }}%</div>
+        <div class="stat-label">Tasa de Cancelación</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational KPIs Details Grid -->
+  <div class="kpi-details-grid">
+    
+    <!-- Tiempos Promedio y Cumplimiento -->
+    <div class="kpi-card animate-in">
+      <h3>⏱️ Tiempos Operacionales Promedio</h3>
+      <div class="kpi-metrics-list">
+        <div class="kpi-metric-item">
+          <div class="metric-meta">
+            <span class="metric-title">Tiempo Promedio de Asignación</span>
+            <span class="metric-desc">Tiempo entre reporte SOS y taller asignado</span>
+          </div>
+          <div class="metric-value-large">{{ avgAssignmentMinutes }} min</div>
+        </div>
+
+        <div class="kpi-metric-item">
+          <div class="metric-meta">
+            <span class="metric-title">Tiempo Promedio de Llegada</span>
+            <span class="metric-desc">Tiempo real entre asignación y arribo físico</span>
+          </div>
+          <div class="metric-value-large">{{ avgArrivalMinutes }} min</div>
+        </div>
+
+        <div class="kpi-metric-item">
+          <div class="metric-meta">
+            <span class="metric-title">Nivel de Cumplimiento de SLA</span>
+            <span class="metric-desc">Porcentaje de arribos puntuales vs estimados</span>
+          </div>
+          <div class="metric-value-large text-green">{{ slaCompliancePercent }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribución de Incidentes Clasificados por la IA -->
+    <div class="kpi-card animate-in">
+      <h3>🤖 Distribución de Incidentes (Clasificados por IA)</h3>
+      <p class="section-desc">Mapeo del tipo de fallas reportadas por los usuarios</p>
+      
+      <div class="kpi-types-chart" style="margin-top: 15px;">
+        @for (item of incidentsByType; track item.type) {
+          <div class="chart-bar-row">
+            <span class="bar-label">{{ getTypeEmoji(item.type) }} {{ item.label }}</span>
+            <div class="bar-track">
+              <div class="bar-fill" [style.width.%]="(item.count / totalIncidentsCount) * 100"></div>
+            </div>
+            <span class="bar-value">{{ item.count }} ({{ ((item.count / totalIncidentsCount) * 100) | number:'1.0-1' }}%)</span>
+          </div>
+        }
+        @if (incidentsByType.length === 0) {
+          <div class="empty-state-small">Sin clasificación disponible</div>
+        }
+      </div>
+    </div>
+
+    <!-- Ranking de Talleres más Eficientes -->
+    <div class="kpi-card animate-in" style="grid-column: span 2;">
+      <h3>🏆 Eficiencia de Talleres (SaaS Multi-tenant)</h3>
+      <p class="section-desc">Ranking de talleres según su nivel de resolución y rapidez de respuesta</p>
+      
+      <div class="kpi-table-container">
+        <table class="kpi-table">
+          <thead>
+            <tr>
+              <th>Taller</th>
+              <th>Incidentes Asignados</th>
+              <th>Resueltos</th>
+              <th>Tasa de Finalización</th>
+              <th>Tasa de Respuesta Promedio</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ws of topWorkshops; track ws.workshop_id) {
+              <tr>
+                <td><strong>{{ ws.workshop_name }}</strong></td>
+                <td>{{ ws.total_incidents }}</td>
+                <td>{{ ws.completed }}</td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="bar-track" style="width: 60px; height: 6px; margin: 0;">
+                      <div class="bar-fill" [style.width.%]="ws.completion_rate" style="background-color: var(--primary-neon);"></div>
+                    </div>
+                    <span>{{ ws.completion_rate }}%</span>
+                  </div>
+                </td>
+                <td>{{ ws.avg_response_minutes }} min</td>
+              </tr>
+            }
+            @if (topWorkshops.length === 0) {
+              <tr>
+                <td colspan="5" class="text-center">No hay talleres registrados en este tenant.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Zonas Calientes / Geolocalización de Daños -->
+    <div class="kpi-card animate-in">
+      <h3>📍 Puntos de Geolocalización (Zonas Críticas)</h3>
+      <p class="section-desc">Últimas ubicaciones de emergencias registradas en este tenant</p>
+      <div class="kpi-metrics-list" style="margin-top: 15px;">
+        @for (pt of incidentHeatpoints; track pt.lat) {
+          <div class="kpi-heatmap-point">
+            <span class="heat-icon">📍</span>
+            <div style="flex: 1;">
+              <div class="heat-coordinates">Lat: {{ pt.lat | number:'1.4-4' }}, Lng: {{ pt.lng | number:'1.4-4' }}</div>
+              <div class="heat-type">Tipo de daño: {{ getTypeLabel(pt.type) }}</div>
+            </div>
+            <a href="https://maps.google.com/?q={{ pt.lat }},{{ pt.lng }}" target="_blank" class="btn btn-ghost btn-sm" style="padding: 4px 8px;">Ver Mapa</a>
+          </div>
+        }
+        @if (incidentHeatpoints.length === 0) {
+          <div class="empty-state-small">Sin geolocalizaciones registradas</div>
+        }
+      </div>
+    </div>
+
+    <!-- Casos Cancelados y Expirados -->
+    <div class="kpi-card animate-in">
+      <h3>⚠️ Emergencias Sin Atención & Cancelaciones</h3>
+      <p class="section-desc">Detalle de pérdidas por cancelaciones o demoras excesivas</p>
+      
+      <div class="kpi-metrics-list" style="margin-top: 15px;">
+        <div class="kpi-metric-item">
+          <div class="metric-meta">
+            <span class="metric-title">Cancelados por el Cliente</span>
+            <span class="metric-desc">Incidentes abortados manualmente</span>
+          </div>
+          <div class="metric-value-large text-red">{{ cancelledCount }}</div>
+        </div>
+
+        <div class="kpi-metric-item">
+          <div class="metric-meta">
+            <span class="metric-title">Expirados (Sin Atención)</span>
+            <span class="metric-desc">Buscaron taller por más de 2 horas sin respuesta</span>
+          </div>
+          <div class="metric-value-large text-yellow">{{ expiredCount }}</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Recent Incidents -->
-  <div class="section-card animate-in">
+  <div class="section-card animate-in" style="margin-top: 32px;">
     <div class="section-header">
       <div>
         <h3>Incidentes Recientes</h3>
-        <p class="section-desc">Últimos incidentes asignados a tu taller</p>
+        <p class="section-desc">Últimas asignaciones del tenant</p>
       </div>
       <a routerLink="/incidents" class="btn btn-ghost btn-sm">Ver todos →</a>
     </div>

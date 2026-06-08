@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import '../core/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/offline_service.dart';
 import '../models/user_model.dart';
 import 'login_screen.dart';
 
@@ -79,6 +81,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildInfoTile(Icons.phone, 'Teléfono', _user!.phone ?? 'No registrado'),
                       _buildInfoTile(Icons.badge, 'Rol', _user!.role.toUpperCase()),
                       
+                      const SizedBox(height: 20),
+                      FadeInLeft(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _exportBackup,
+                                icon: const Icon(Icons.backup),
+                                label: const Text('EXPORTAR'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.cardBg,
+                                  foregroundColor: AppTheme.primaryNeon,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _importBackup,
+                                icon: const Icon(Icons.settings_backup_restore),
+                                label: const Text('IMPORTAR'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.cardBg,
+                                  foregroundColor: AppTheme.primaryNeon,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       const Spacer(),
                       
                       FadeInUp(
@@ -95,6 +130,107 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
+    );
+  }
+
+  void _exportBackup() {
+    final String data = OfflineService.instance.exportLocalData();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Exportar Datos Locales (Hive)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Copia el siguiente texto JSON para respaldar tus incidentes guardados sin conexión:'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: TextEditingController(text: data),
+                readOnly: true,
+                maxLines: 5,
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'JSON de Respaldo',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: data));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Copiado al portapapeles')),
+                );
+                Navigator.pop(context);
+              },
+              child: const Text('COPIAR'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CERRAR'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _importBackup() {
+    final textController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Restaurar Datos Locales (Hive)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Pega el texto JSON de tu respaldo para restaurar los incidentes:'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textController,
+                maxLines: 5,
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Pega el JSON aquí...',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                final text = textController.text.trim();
+                if (text.isEmpty) return;
+                try {
+                  await OfflineService.instance.importLocalData(text);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✅ Datos locales restaurados con éxito')),
+                    );
+                  }
+                  Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('❌ JSON inválido o corrupto')),
+                    );
+                  }
+                }
+              },
+              child: const Text('RESTAURAR'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCELAR'),
+            ),
+          ],
+        );
+      },
     );
   }
 

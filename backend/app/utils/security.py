@@ -63,6 +63,12 @@ def get_current_workshop(token: str = Depends(oauth2_scheme), db: Session = Depe
     role = payload.get("role")
     entity_id = payload.get("entity_id")
 
+    if role == UserRole.ADMIN:
+        workshop = db.query(Workshop).first()
+        if not workshop:
+            raise HTTPException(status_code=404, detail="No hay talleres registrados en la base de datos.")
+        return workshop
+
     if role != UserRole.WORKSHOP_ADMIN:
         raise HTTPException(status_code=403, detail="Acceso denegado: esta ruta es solo para talleres")
 

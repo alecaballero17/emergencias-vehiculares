@@ -180,6 +180,28 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                                   letterSpacing: 0.5,
                                 ),
                               ),
+                              if (_aiEstimate!['min_hours'] != null && _aiEstimate!['max_hours'] != null) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Tiempo de reparación sugerido:',
+                                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.timer_outlined, color: AppTheme.accentNeon, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${_aiEstimate!['min_hours']} - ${_aiEstimate!['max_hours']} horas',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 8),
                               Text(
                                 _aiEstimate!['reasoning'] ?? '',
@@ -234,7 +256,8 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                           final quote = _quotations[index];
                           final workshop = quote['workshop'] ?? {};
                           final amount = quote['amount'] ?? 0.0;
-                          final hours = quote['estimated_repair_hours'] ?? 0.0;
+                          final repairHours = quote['estimated_repair_hours'] ?? 0.0;
+                          final arrivalHours = quote['estimated_arrival_hours'] ?? 0.0;
                           final notes = quote['description'] ?? 'Sin descripción adicional';
 
                           return FadeInUp(
@@ -272,10 +295,17 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      const Icon(Icons.timer_outlined, size: 14, color: AppTheme.textSecondary),
+                                      const Icon(Icons.drive_eta_outlined, size: 14, color: AppTheme.textSecondary),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Tiempo estimado: $hours horas',
+                                        'Llegada: $arrivalHours h',
+                                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      const Icon(Icons.build_circle_outlined, size: 14, color: AppTheme.textSecondary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Reparación: $repairHours h',
                                         style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                                       ),
                                     ],

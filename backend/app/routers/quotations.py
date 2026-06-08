@@ -48,6 +48,7 @@ async def create_quotation(
         workshop_id=current_workshop.id,
         amount=data.amount,
         estimated_repair_hours=data.estimated_repair_hours,
+        estimated_arrival_hours=data.estimated_arrival_hours,
         description=data.description,
     )
     db.add(quotation)
@@ -62,6 +63,7 @@ async def create_quotation(
         "workshop_name": current_workshop.name,
         "amount": data.amount,
         "estimated_repair_hours": data.estimated_repair_hours,
+        "estimated_arrival_hours": data.estimated_arrival_hours,
     })
 
     await notify_user(

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # AI Providers
     openai_api_key: str = ""
     gemini_api_key: str = ""
+    groq_api_key: str = ""
 
     # Firebase
     firebase_credentials_path: str = "firebase-credentials.json"

@@ -35,6 +35,18 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         # Determinar tipo de entidad
         if role == UserRole.WORKSHOP_ADMIN.value or role == "workshop_admin":
             entity_type = "workshop"
+        elif role == UserRole.ADMIN.value or role == "admin":
+            entity_type = "workshop"
+            db = SessionLocal()
+            try:
+                from app.models.workshop import Workshop
+                workshop = db.query(Workshop).first()
+                if workshop:
+                    entity_id = workshop.id
+                else:
+                    entity_id = 1
+            finally:
+                db.close()
         else:
             entity_type = "user"
 

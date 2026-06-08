@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -142,5 +143,22 @@ class OfflineService {
   Future<void> deleteOfflineIncident(String id) async {
     await _box.delete(id);
     debugPrint("[OfflineService] Incidente offline eliminado localmente: $id");
+  }
+
+  String exportLocalData() {
+    final Map<String, dynamic> data = {};
+    for (var key in _box.keys) {
+      data[key.toString()] = _box.get(key);
+    }
+    return jsonEncode(data);
+  }
+
+  Future<void> importLocalData(String jsonString) async {
+    final Map<String, dynamic> data = jsonDecode(jsonString) as Map<String, dynamic>;
+    await _box.clear();
+    for (var entry in data.entries) {
+      await _box.put(entry.key, entry.value);
+    }
+    debugPrint("[OfflineService] Datos locales de Hive restaurados con éxito.");
   }
 }

@@ -50,7 +50,10 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-        manifestPlaceholders = [mapsApiKey: localProperties.getProperty('maps.key') ?: "AIzaSyA-dummykey-for-maps-rendering-without-crashing"]
+        manifestPlaceholders = [
+            applicationName: "io.flutter.app.FlutterApplication",
+            mapsApiKey: localProperties.getProperty('maps.key') ?: "AIzaSyA-dummykey-for-maps-rendering-without-crashing"
+        ]
     }
 
     buildTypes {

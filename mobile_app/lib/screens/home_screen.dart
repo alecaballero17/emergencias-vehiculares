@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:animate_do/animate_do.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../core/app_theme.dart';
 import '../services/vehicle_service.dart';
 import '../services/incident_service.dart';
@@ -15,6 +18,7 @@ import 'profile_screen.dart';
 import 'vehicle_form_screen.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
+import 'analytics_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -159,9 +163,21 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.mic, color: AppTheme.primaryNeon),
+            tooltip: 'Asistente de Voz',
+            onPressed: _openVoiceAssistant,
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline, color: AppTheme.primaryNeon),
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.bar_chart, color: AppTheme.primaryNeon),
+            tooltip: 'Analítica y KPIs',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsScreen()));
             },
           ),
           IconButton(
@@ -429,6 +445,256 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
           ),
+    );
+  }
+
+  void _openVoiceAssistant() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return const VoiceAssistantBottomSheet();
+      },
+    );
+  }
+}
+
+class VoiceAssistantBottomSheet extends StatefulWidget {
+  const VoiceAssistantBottomSheet({super.key});
+
+  @override
+  State<VoiceAssistantBottomSheet> createState() => _VoiceAssistantBottomSheetState();
+}
+
+class _VoiceAssistantBottomSheetState extends State<VoiceAssistantBottomSheet> {
+  final _record = AudioRecorder();
+  final _flutterTts = FlutterTts();
+  final _incidentService = IncidentService();
+  
+  bool _isRecording = false;
+  bool _isLoading = false;
+  String _userText = '';
+  String _aiResponse = '¡Hola! Presiona el botón y habla para pedir un reporte operativo o financiero.';
+
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("es-ES");
+    await _flutterTts.setSpeechRate(0.85);
+  }
+
+  @override
+  void dispose() {
+    _record.dispose();
+    _flutterTts.stop();
+    super.dispose();
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      final path = await _record.stop();
+      setState(() {
+        _isRecording = false;
+        _isLoading = true;
+      });
+
+      if (path != null) {
+        final result = await _incidentService.getVoiceReport(path);
+        if (result != null && mounted) {
+          setState(() {
+            _userText = result['transcription'] ?? '';
+            _aiResponse = result['answer'] ?? '';
+            _isLoading = false;
+          });
+          await _flutterTts.speak(_aiResponse);
+        } else if (mounted) {
+          setState(() {
+            _aiResponse = 'No pude procesar el reporte de voz. Inténtalo de nuevo.';
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      if (await _record.hasPermission()) {
+        final tempDir = await getTemporaryDirectory();
+        final path = '${tempDir.path}/voice_query.wav';
+        await _record.start(
+          const RecordConfig(encoder: AudioEncoder.wav),
+          path: path,
+        );
+        setState(() {
+          _isRecording = true;
+          _userText = '';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.darkBg,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Asistente de Voz Groq IA',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryNeon,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Pide reportes hablando con naturalidad',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 30),
+          
+          // Burbuja de conversación
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.cardBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[900]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_userText.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: AppTheme.accentNeon,
+                        child: Icon(Icons.person, size: 12, color: Colors.black),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tú dijiste:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accentNeon.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _userText,
+                    style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                  ),
+                  const Divider(height: 20, color: Colors.grey),
+                ],
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 12,
+                      backgroundColor: AppTheme.primaryNeon,
+                      child: Icon(Icons.android, size: 12, color: Colors.black),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Asistente:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryNeon.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _isLoading
+                    ? const Row(
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Analizando reporte...',
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        _aiResponse,
+                        style: const TextStyle(fontSize: 14, height: 1.4),
+                      ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 40),
+          
+          // Botón micrófono
+          GestureDetector(
+            onTap: _isLoading ? null : _toggleRecording,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isRecording ? AppTheme.errorRed : AppTheme.cardBg,
+                border: Border.all(
+                  color: _isRecording ? Colors.red : AppTheme.primaryNeon,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_isRecording ? Colors.red : AppTheme.primaryNeon).withOpacity(0.3),
+                    blurRadius: _isRecording ? 20 : 10,
+                    spreadRadius: _isRecording ? 5 : 1,
+                  )
+                ],
+              ),
+              child: Icon(
+                _isRecording ? Icons.mic : Icons.mic_none,
+                size: 36,
+                color: _isRecording ? Colors.white : AppTheme.primaryNeon,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _isRecording ? 'Presiona para Detener y Procesar' : 'Toca el Micrófono para Hablar',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: _isRecording ? AppTheme.errorRed : AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 }

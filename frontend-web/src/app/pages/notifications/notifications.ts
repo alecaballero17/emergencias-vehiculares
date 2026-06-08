@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WorkshopService } from '../../services/workshop.service';
 import { Notification } from '../../models/interfaces';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
+import { WebSocketService } from '../../services/websocket.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-notifications',
@@ -12,19 +14,35 @@ import { ChangeDetectorRef } from '@angular/core';
   templateUrl: './notifications.html',
   styleUrl: './notifications.scss'
 })
-export class NotificationsComponent implements OnInit {
+export class NotificationsComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   loading = false;
   private idRegex = /#(\d+)/;
+  private wsSubscription: Subscription | null = null;
 
   constructor(
     private ws: WorkshopService, 
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private wsService: WebSocketService
   ) {}
 
   ngOnInit(): void {
     this.loadNotifications();
+    
+    // Escuchar notificaciones en tiempo real para recargar la lista
+    this.wsSubscription = this.wsService.messages$.subscribe(msg => {
+      if (msg.type === 'notification') {
+        console.log('[Notifications Component] Recibida notificación vía WebSocket. Recargando...');
+        this.loadNotifications();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.wsSubscription) {
+      this.wsSubscription.unsubscribe();
+    }
   }
 
   loadNotifications(): void {

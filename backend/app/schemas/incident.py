@@ -63,6 +63,7 @@ class PaymentResponse(BaseModel):
 class QuotationCreate(BaseModel):
     amount: float
     estimated_repair_hours: Optional[float] = None
+    estimated_arrival_hours: Optional[float] = None
     description: Optional[str] = None
 
 
@@ -73,6 +74,7 @@ class QuotationResponse(BaseModel):
     tenant_id: int
     amount: float
     estimated_repair_hours: Optional[float]
+    estimated_arrival_hours: Optional[float]
     description: Optional[str]
     status: QuotationStatus
     created_at: datetime
@@ -92,6 +94,8 @@ class CostEstimateResponse(BaseModel):
     max_cost: float
     currency: str = "BOB"
     reasoning: str
+    min_hours: Optional[float] = None
+    max_hours: Optional[float] = None
 
 
 # --- Payment Intent (Paralela Simulation) ---
@@ -221,3 +225,14 @@ class TenantResponse(BaseModel):
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class TenantCreate(BaseModel):
+    name: str
+    slug: str
+
+
+class TenantUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    is_active: Optional[bool] = None

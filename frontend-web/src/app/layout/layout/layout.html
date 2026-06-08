@@ -33,14 +33,24 @@
     </nav>
 
     <div class="sidebar-footer">
-      @if (sidebarOpen && workshop) {
-        <div class="workshop-info">
-          <div class="workshop-avatar">{{ workshop.name.charAt(0) }}</div>
-          <div class="workshop-details">
-            <span class="workshop-name">{{ workshop.name }}</span>
-            <span class="workshop-email">{{ workshop.email }}</span>
+      @if (sidebarOpen) {
+        @if (workshop) {
+          <div class="workshop-info">
+            <div class="workshop-avatar">{{ workshop.name.charAt(0) }}</div>
+            <div class="workshop-details">
+              <span class="workshop-name">{{ workshop.name }}</span>
+              <span class="workshop-email">{{ workshop.email }}</span>
+            </div>
           </div>
-        </div>
+        } @else if (isAdmin) {
+          <div class="workshop-info">
+            <div class="workshop-avatar">👑</div>
+            <div class="workshop-details">
+              <span class="workshop-name">Administrador</span>
+              <span class="workshop-email">Plataforma SaaS</span>
+            </div>
+          </div>
+        }
       }
       <button class="logout-btn" (click)="logout()" title="Cerrar sesión">
         <span>🚪</span>
@@ -63,8 +73,16 @@
       </button>
 
       <div class="topbar-right">
+        <!-- Indicador de conexión en tiempo real -->
+        <span class="ws-indicator" [class.connected]="wsConnected" [title]="wsConnected ? 'Conexión en tiempo real activa' : 'Desconectado. Reintentando...'">
+          <span class="ws-indicator-dot"></span>
+          <span class="ws-indicator-text">{{ wsConnected ? 'En Línea' : 'Desconectado' }}</span>
+        </span>
+
         @if (workshop) {
           <span class="topbar-workshop">{{ workshop.name }}</span>
+        } @else if (isAdmin) {
+          <span class="topbar-workshop">Admin Plataforma</span>
         }
         <a routerLink="/notifications" class="topbar-notif" title="Notificaciones">
           🔔

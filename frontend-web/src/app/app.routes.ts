@@ -20,6 +20,9 @@ export const routes: Routes = [
       { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then(m => m.VehiclesComponent) },
       { path: 'finance', loadComponent: () => import('./pages/finance/finance').then(m => m.FinanceComponent) },
       { path: 'analytics', loadComponent: () => import('./pages/analytics/analytics').then(m => m.AnalyticsComponent) },
+      { path: 'tenants', loadComponent: () => import('./pages/tenants/tenants').then(m => m.TenantsComponent) },
+      { path: 'backup', loadComponent: () => import('./pages/backup/backup').then(m => m.BackupComponent) },
+      { path: 'voice-assistant', loadComponent: () => import('./pages/voice-assistant/voice-assistant').then(m => m.VoiceAssistantComponent) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

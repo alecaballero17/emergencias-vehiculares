@@ -13,7 +13,7 @@ from app.middleware.tenant_middleware import tenant_middleware
 from app.routers import (
     auth, users, vehicles, incidents, workshops,
     payments, notifications, quotations, analytics,
-    tenants, ai_router, ws_router,
+    tenants, ai_router, ws_router, backup, voice_assistant,
 )
 
 settings = get_settings()
@@ -59,6 +59,8 @@ app.include_router(quotations.router)
 app.include_router(analytics.router)
 app.include_router(tenants.router)
 app.include_router(ai_router.router)
+app.include_router(backup.router)
+app.include_router(voice_assistant.router)
 
 # Registrar router WebSocket
 app.include_router(ws_router.router)
@@ -96,4 +98,5 @@ def api_health():
         "status": "healthy",
         "database": "connected",
         "websockets": ws_manager.get_connected_count(),
+        "active_keys": list(ws_manager.active_connections.keys()),
     }

@@ -64,10 +64,11 @@ export class WorkshopService {
   }
 
   // === Cotizaciones & Fase 2 Transiciones ===
-  sendQuotation(incidentId: number, amount: number, hours: number, description: string): Observable<any> {
+  sendQuotation(incidentId: number, amount: number, arrivalHours: number, repairHours: number, description: string): Observable<any> {
     return this.http.post(`${this.api}/quotations/${incidentId}`, {
       amount,
-      estimated_repair_hours: hours,
+      estimated_arrival_hours: arrivalHours,
+      estimated_repair_hours: repairHours,
       description
     });
   }
@@ -89,5 +90,38 @@ export class WorkshopService {
 
   markNotificationRead(id: number): Observable<any> {
     return this.http.put(`${this.api}/notifications/${id}/read`, {});
+  }
+
+  // === Analítica & KPIs ===
+  getAssignmentTimeKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/assignment-time`);
+  }
+
+  getArrivalTimeKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/arrival-time`);
+  }
+
+  getIncidentsByTypeKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/incidents-by-type`);
+  }
+
+  getTopWorkshopsKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/top-workshops`);
+  }
+
+  getIncidentHeatmapKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/incident-heatmap`);
+  }
+
+  getCancelledCasesKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/cancelled-cases`);
+  }
+
+  getSlaComplianceKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/sla-compliance`);
+  }
+
+  getDashboardSummaryKPI(): Observable<any> {
+    return this.http.get(`${this.api}/analytics/summary`);
   }
 }

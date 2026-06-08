@@ -44,6 +44,17 @@ def seed():
             db.add(u)
             users_t1.append(u)
 
+        # === PLATFORM ADMINISTRATOR (Super Admin) ===
+        admin = User(
+            tenant_id=t1.id,
+            email="admin@demo.com",
+            password_hash=hash_password("123456"),
+            full_name="Super Administrador",
+            phone="79999999",
+            role=UserRole.ADMIN,
+        )
+        db.add(admin)
+
         # === USUARIOS (Tenant 2) ===
         users_t2 = []
         for i, (name, email) in enumerate([

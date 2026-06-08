@@ -254,4 +254,124 @@ class IncidentService {
       return false;
     }
   }
+
+  Future<String?> createPaymentIntent({
+    required int incidentId,
+    required double amount,
+    String paymentMethod = 'paralela',
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return null;
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/payments/create-intent',
+        data: {
+          'incident_id': incidentId,
+          'amount': amount,
+          'payment_method': paymentMethod,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      if (response.statusCode == 201) {
+        return response.data['payment_intent_id'] as String?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error creando intención de pago: $e');
+      return null;
+    }
+  }
+
+  Future<bool> confirmPayment({
+    required String paymentIntentId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return false;
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/payments/confirm/$paymentIntentId',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error confirmando pago: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getVoiceReport(String filePath) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return null;
+
+      final formData = FormData.fromMap({
+        'audio': await MultipartFile.fromFile(filePath, filename: 'voice_query.wav'),
+      });
+
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/ai/voice-report',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error en reporte de voz: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getAnalyticsKPIs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return null;
+
+      final headers = {'Authorization': 'Bearer $token'};
+      
+      final responses = await Future.wait([
+        _dio.get('${ApiConstants.baseUrl}/analytics/summary', options: Options(headers: headers)),
+        _dio.get('${ApiConstants.baseUrl}/analytics/assignment-time', options: Options(headers: headers)),
+        _dio.get('${ApiConstants.baseUrl}/analytics/arrival-time', options: Options(headers: headers)),
+        _dio.get('${ApiConstants.baseUrl}/analytics/sla-compliance', options: Options(headers: headers)),
+        _dio.get('${ApiConstants.baseUrl}/analytics/incidents-by-type', options: Options(headers: headers)),
+        _dio.get('${ApiConstants.baseUrl}/analytics/top-workshops', options: Options(headers: headers)),
+        _dio.get('${ApiConstants.baseUrl}/analytics/cancelled-cases', options: Options(headers: headers)),
+      ]);
+
+      return {
+        'summary': responses[0].data,
+        'assignment': responses[1].data,
+        'arrival': responses[2].data,
+        'sla': responses[3].data,
+        'types': responses[4].data,
+        'workshops': responses[5].data,
+        'cancellation': responses[6].data,
+      };
+    } catch (e) {
+      debugPrint('Error obteniendo analíticas: $e');
+      return null;
+    }
+  }
 }

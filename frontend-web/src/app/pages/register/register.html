@@ -29,8 +29,24 @@
       }
 
       <div class="form-group">
-        <label for="full_name">Nombre Completo</label>
-        <input id="full_name" type="text" formControlName="full_name" class="form-input" placeholder="Tu nombre completo" />
+        <label for="name">Nombre del Taller</label>
+        <input id="name" type="text" formControlName="name" class="form-input" placeholder="Nombre de tu taller mecánico" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="address">Dirección del Taller</label>
+          <input id="address" type="text" formControlName="address" class="form-input" placeholder="Ej. Av. Banzer 4to Anillo" />
+        </div>
+        <div class="form-group">
+          <label for="tenant_id">Red de Talleres (Tenant)</label>
+          <select id="tenant_id" formControlName="tenant_id" class="form-input">
+            <option value="" disabled selected>Selecciona una red...</option>
+            @for (t of tenants; track t.id) {
+              <option [value]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
       </div>
 
       <div class="form-row">

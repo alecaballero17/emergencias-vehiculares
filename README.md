@@ -152,6 +152,8 @@ Una plataforma inteligente que utiliza **Inteligencia Artificial (Google Gemini)
 | **Frontend Web** | Angular 18 (PWA + Service Worker) | Dashboard de talleres, instalable y con caché offline |
 | **App Móvil** | Flutter 3.x (Dart + Hive) | App de cliente con soporte Offline y base de datos Hive |
 | **IA Multimodal** | Google Gemini 1.5 Flash | Diagnóstico multimodal, IA en español y estimador de costos en Bs. |
+| **Asistente de Voz** | Groq Whisper + Llama 3.1 | Transcripción de voz y asistente analítico conversacional |
+| **Síntesis de Voz** | Web Speech Synthesis API / flutter_tts | Conversión de texto a voz para respuestas del asistente |
 | **Geocodificación** | Nominatim (OpenStreetMap) | Dirección legible desde coordenadas |
 | **Notificaciones** | flutter_local_notifications | Notificaciones instantáneas y vibración en-app |
 | **Sincronización** | WebSockets (Bidireccional) | Tracking en vivo y transiciones de estado en tiempo real |
@@ -242,6 +244,30 @@ El panel web de administración de talleres se transformó en una Aplicación We
 * **Mapa de Calor (Heatmap Leaflet):** Integración dinámica de Leaflet y Leaflet.heat (vía CDN) para representar geográficamente la densidad y puntos calientes de los incidentes viales.
 * **Métricas Clave (KPIs):** Tasa de cumplimiento de acuerdos de nivel de servicio (SLA), tiempo promedio de llegada, tiempo promedio de asignación, costo acumulado de comisiones y análisis del total de cancelaciones.
 
+#### 🎙️ Asistente de Voz con IA (Groq Whisper + Llama 3.1)
+Asistente analítico y operativo por comandos de voz:
+* **Audio-Consultas Inteligentes:** El usuario puede realizar preguntas en lenguaje natural sobre estadísticas financieras o del estado de incidentes.
+* **Backend Multimodelo:** Procesa y transcribe el audio en tiempo real con **Groq Whisper (whisper-large-v3)** y analiza la intención consultando la base de datos con **Groq Llama 3 (llama-3.1-8b-instant)** para responder en español.
+* **Frontend Web:** Permite grabar la voz desde el panel web de talleres y reproduce la respuesta mediante síntesis de voz nativa del navegador (**Web Speech Synthesis API**).
+* **App Móvil:** Cuenta con un panel inferior flotante de grabación por voz que lee en voz alta las respuestas con **flutter_tts**.
+
+#### 💾 Sistema de Copias de Seguridad (Backup & Restore)
+Salvaguarda y recuperación del estado del sistema:
+* **Exportación Total:** Endpoint que extrae y serializa todas las tablas PostgreSQL relacionales en un único archivo JSON estructurado respetando el aislamiento multi-inquilino.
+* **Restauración de Base de Datos:** Endpoint de importación que limpia las tablas considerando restricciones de llaves foráneas y resetea las secuencias de secuencias de IDs en Postgres para evitar colisiones.
+* **Respaldo Local de Caché (Hive):** Los incidentes offline guardados localmente en la app Flutter se pueden exportar como JSON al portapapeles o importar pegando una cadena para migrar el estado local.
+
+#### ⚡ WebSocket Global & Notificaciones de Escritorio
+Actualizaciones visuales instantáneas en la web:
+* **WebSocket Centralizado:** Canal persistente iniciado en el layout web que mantiene la sincronización de incidencias activas en segundo plano.
+* **Notificaciones Push Locales:** Integración con la API de Notificaciones del Navegador (HTML5 Notification API) para notificar visual e instantáneamente en el sistema operativo sobre nuevas emergencias asignadas.
+* **Indicador en Tiempo Real:** Elemento visual con micro-animaciones parpadeantes ("En Línea" / "Desconectado") para monitorear constantemente el estado de la conexión en vivo.
+
+#### ⏱️ Estimación Desglosada de Tiempos (CU23)
+Mayor precisión en el ciclo del servicio:
+* **Desglose de Tiempos:** Separación del **Tiempo de Llegada** del mecánico (para asistencia) y el **Tiempo de Reparación** estimado del vehículo en la cotización.
+* **IA Sugerida:** Se extendió el análisis de **Google Gemini 1.5 Flash** para recomendar rangos horarios mínimos y máximos según la gravedad detectada en la evidencia.
+
 ---
 
 ## 📁 Estructura del Proyecto
@@ -261,15 +287,17 @@ emergencias-vehiculares/
 │   │   │   ├── image_classifier.py       # Análisis de imágenes
 │   │   │   ├── incident_classifier.py    # Votación ponderada
 │   │   │   └── summary_generator.py      # Generación de fichas
-│   │   ├── models/                  # Modelos SQLAlchemy (10 tablas)
-│   │   ├── routers/                 # Endpoints API (7 routers)
+│   │   ├── models/                  # Modelos SQLAlchemy (11 tablas)
+│   │   ├── routers/                 # Endpoints API (routers por módulo)
 │   │   │   ├── auth.py              # Registro e inicio de sesión
 │   │   │   ├── users.py             # Perfil de usuario
 │   │   │   ├── vehicles.py          # CRUD de vehículos
 │   │   │   ├── incidents.py         # Gestión de emergencias
 │   │   │   ├── workshops.py         # Operaciones de talleres
 │   │   │   ├── payments.py          # Sistema de pagos
-│   │   │   └── notifications.py     # Notificaciones
+│   │   │   ├── notifications.py     # Notificaciones
+│   │   │   ├── backup.py            # Copias de seguridad (Exportar/Importar)
+│   │   │   └── voice_assistant.py   # Asistente de voz (Groq Whisper + Llama 3)
 │   │   ├── schemas/                 # Validación Pydantic
 │   │   ├── services/                # Lógica de negocio
 │   │   │   ├── incident_service.py  # Procesamiento de incidentes
@@ -289,7 +317,7 @@ emergencias-vehiculares/
 │   │   ├── interceptors/            # JWT Interceptor automático
 │   │   ├── layout/                  # Sidebar + Navegación
 │   │   ├── models/                  # Interfaces TypeScript
-│   │   ├── pages/                   # 8 páginas
+│   │   ├── pages/                   # Páginas de la aplicación
 │   │   │   ├── login/               # Inicio de sesión
 │   │   │   ├── dashboard/           # Métricas y estadísticas
 │   │   │   ├── available/           # Incidentes disponibles
@@ -298,7 +326,10 @@ emergencias-vehiculares/
 │   │   │   ├── technicians/         # Gestión de técnicos
 │   │   │   ├── notifications/       # Centro de notificaciones
 │   │   │   ├── finances/            # Reporte financiero
-│   │   │   └── profile/             # Perfil del taller
+│   │   │   ├── profile/             # Perfil del taller
+│   │   │   ├── backup/              # Copias de seguridad (Exportar/Importar)
+│   │   │   ├── voice-assistant/     # Asistente de voz conversacional IA
+│   │   │   └── tenants/             # Administración de Tenants
 │   │   └── services/                # Comunicación con API
 │   └── src/styles.scss              # Sistema de diseño global
 │
@@ -391,6 +422,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
 # === Google Gemini (IA) ===
 GEMINI_API_KEY=tu-api-key-de-gemini
+
+# === Groq API Key (Asistente de Voz) ===
+GROQ_API_KEY=tu-api-key-de-groq
 
 # === Firebase (Notificaciones Push) ===
 FIREBASE_CREDENTIALS_PATH=firebase-credentials.json
@@ -557,10 +591,17 @@ adb reverse tcp:8000 tcp:8000
 | `GET`  | `/api/analytics/cancelled-cases` | Detalle e importes de cancelaciones |
 | `GET`  | `/api/analytics/sla-compliance` | % de cumplimiento de tiempos estimados (SLA) |
 
-### 🤖 Inteligencia Artificial
+### 🤖 Inteligencia Artificial y Asistente de Voz
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `POST` | `/api/ai/estimate-cost` | Estimar costos en bolivianos (Bs.) con Gemini Flash |
+| `POST` | `/api/ai/voice-report` | Transcribir comando de voz con Whisper y responder con Llama 3.1 (Asistente de Voz) |
+
+### 💾 Copias de Seguridad (Backup)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET`  | `/api/backup/export` | Exportar base de datos PostgreSQL completa en JSON |
+| `POST` | `/api/backup/import` | Importar y restaurar la base de datos relacional desde un JSON |
 
 ### 🔔 Notificaciones
 | Método | Endpoint | Descripción |

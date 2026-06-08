@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { WorkshopService } from '../../services/workshop.service';
 import { Incident } from '../../models/interfaces';
+import { WebSocketService } from '../../services/websocket.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-available',
@@ -15,19 +17,35 @@ export class AvailableComponent implements OnInit, OnDestroy {
   incidents: Incident[] = [];
   loading = true;
   private pollingInterval: any;
+  private wsSubscription: Subscription | null = null;
 
-  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
+  constructor(
+    private ws: WorkshopService, 
+    private cd: ChangeDetectorRef,
+    private wsService: WebSocketService
+  ) {}
 
   ngOnInit(): void {
     this.loadIncidents();
     this.pollingInterval = setInterval(() => {
       this.refreshIncidentsSilently();
     }, 5000);
+
+    // Escuchar alertas de nuevos incidentes para recargar al instante
+    this.wsSubscription = this.wsService.messages$.subscribe(msg => {
+      if (msg.type === 'new_incident_alert') {
+        console.log('[Available SOS] Recibida nueva emergencia via WebSocket. Refrescando...');
+        this.refreshIncidentsSilently();
+      }
+    });
   }
 
   ngOnDestroy(): void {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
+    }
+    if (this.wsSubscription) {
+      this.wsSubscription.unsubscribe();
     }
   }
 

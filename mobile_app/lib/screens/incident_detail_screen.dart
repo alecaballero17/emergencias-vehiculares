@@ -147,18 +147,29 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   Future<void> _executePayment(double amount) async {
     setState(() => _isPaymentLoading = true);
 
-    final success = await _incidentService.makePayment(
+    bool success = false;
+    final intentId = await _incidentService.createPaymentIntent(
       incidentId: widget.incidentId,
       amount: amount,
       paymentMethod: _selectedPaymentMethod,
     );
+
+    if (intentId != null) {
+      success = await _incidentService.confirmPayment(paymentIntentId: intentId);
+    } else {
+      success = await _incidentService.makePayment(
+        incidentId: widget.incidentId,
+        amount: amount,
+        paymentMethod: _selectedPaymentMethod,
+      );
+    }
 
     setState(() => _isPaymentLoading = false);
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Pago realizado exitosamente'),
+          content: Text('✅ Pago procesado exitosamente por pasarela Paralela'),
           backgroundColor: Colors.green,
         ),
       );
@@ -166,7 +177,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error al procesar el pago'),
+          content: Text('Error al procesar el pago por pasarela'),
           backgroundColor: Colors.red,
         ),
       );

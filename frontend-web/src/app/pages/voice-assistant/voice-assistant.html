@@ -1,0 +1,80 @@
+<div class="page animate-in">
+  <div class="page-header">
+    <div>
+      <h2>Asistente de Voz Inteligente (Groq IA)</h2>
+      <p class="text-secondary">Pide reportes operativos y financieros hablando de forma natural y escucha las respuestas del sistema.</p>
+    </div>
+  </div>
+
+  <div class="card voice-card">
+    <!-- Chat Window -->
+    <div class="chat-window" #chatWindow>
+      @for (msg of chatHistory; track msg.text) {
+        <div class="chat-bubble" [class.chat-bubble-user]="msg.sender === 'user'" [class.chat-bubble-ai]="msg.sender === 'ai'">
+          <div class="bubble-avatar">
+            {{ msg.sender === 'user' ? '👨' : '🤖' }}
+          </div>
+          <div class="bubble-content">
+            <p>{{ msg.text }}</p>
+          </div>
+        </div>
+      }
+
+      @if (loading) {
+        <div class="chat-bubble chat-bubble-ai loading-bubble">
+          <div class="bubble-avatar">🤖</div>
+          <div class="bubble-content">
+            <div class="wave-loader">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Voice Control Panel -->
+    <div class="voice-controls">
+      @if (recording) {
+        <div class="recording-indicator">
+          <span class="pulse-dot"></span>
+          Grabando audio... Habla ahora.
+        </div>
+        
+        <!-- Animación de onda de voz activa -->
+        <div class="voice-wave">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      } @else if (loading) {
+        <div class="recording-indicator processing">
+          Analizando audio con Groq Whisper y Llama3...
+        </div>
+      } @else {
+        <div class="recording-indicator idle">
+          Haz clic abajo para iniciar
+        </div>
+      }
+
+      <button 
+        class="mic-btn" 
+        [class.recording]="recording" 
+        [disabled]="loading"
+        (click)="toggleRecording()"
+        title="{{ recording ? 'Detener grabación' : 'Iniciar grabación' }}"
+      >
+        <span class="mic-icon">🎙️</span>
+      </button>
+
+      <p class="mic-hint">
+        {{ recording ? 'Haz clic para detener y enviar' : 'Presiona el botón para hablar' }}
+      </p>
+    </div>
+  </div>
+</div>

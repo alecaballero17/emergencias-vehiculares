@@ -44,7 +44,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   // Formulario cotizar
   quoteAmount: number | null = null;
-  quoteHours: number | null = null;
+  quoteArrivalHours: number | null = null;
+  quoteRepairHours: number | null = null;
   quoteDescription: string = '';
 
   showAcceptModal = false;
@@ -341,12 +342,22 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   sendQuotation(): void {
-    if (!this.incident || this.quoteAmount === null || this.quoteHours === null) return;
+    if (!this.incident || this.quoteAmount === null || this.quoteArrivalHours === null || this.quoteRepairHours === null) return;
     this.actionLoading = true;
-    this.ws.sendQuotation(this.incident.id, this.quoteAmount, this.quoteHours, this.quoteDescription).subscribe({
+    this.ws.sendQuotation(
+      this.incident.id, 
+      this.quoteAmount, 
+      this.quoteArrivalHours, 
+      this.quoteRepairHours, 
+      this.quoteDescription
+    ).subscribe({
       next: () => {
         this.showQuoteModal = false;
         this.actionLoading = false;
+        this.quoteAmount = null;
+        this.quoteArrivalHours = null;
+        this.quoteRepairHours = null;
+        this.quoteDescription = '';
         this.loadIncident(this.incident!.id);
       },
       error: (err) => {
