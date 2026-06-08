@@ -205,6 +205,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
         ? 'El mecánico ha completado la asistencia. Puedes proceder al pago.' 
         : 'El incidente ha sido cancelado.';
     
+    final bool needsPayment = endStatus == 'finalizado' || (_cancellationFee != null && _cancellationFee! > 0);
+
     if (_cancellationFee != null && _cancellationFee! > 0) {
       message += '\n\nSe ha aplicado un recargo de reconocimiento de Bs. $_cancellationFee por cancelación en camino/atención.';
     }
@@ -220,9 +222,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context); // Cerrar diálogo
-              Navigator.pop(context); // Volver al Home
+              Navigator.pop(context); // Volver a los detalles del incidente
             },
-            child: const Text('Volver al Home'),
+            child: Text(needsPayment ? 'Ir a pagar' : 'Volver a Detalles'),
           ),
         ],
       ),

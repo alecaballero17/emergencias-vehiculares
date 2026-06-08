@@ -97,4 +97,18 @@
       <router-outlet />
     </main>
   </div>
+
+  <!-- Contenedor de Toasts en tiempo real -->
+  <div class="toast-container">
+    @for (toast of toasts; track toast.id) {
+      <div class="toast" [class]="'toast-' + toast.type" (click)="dismissToast(toast.id)">
+        <div class="toast-icon">{{ toast.icon }}</div>
+        <div class="toast-content">
+          <h4 class="toast-title">{{ toast.title }}</h4>
+          <p class="toast-message">{{ toast.message }}</p>
+        </div>
+        <button class="toast-close" (click)="dismissToast(toast.id); $event.stopPropagation()">&times;</button>
+      </div>
+    }
+  </div>
 </div>

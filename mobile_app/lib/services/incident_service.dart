@@ -15,6 +15,8 @@ class IncidentService {
     String? audioPath,
     List<XFile>? imageFiles,
     String? localUuid,
+    bool requiresTowTruck = false,
+    double? towTruckCost,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -27,6 +29,8 @@ class IncidentService {
         'longitude': longitude,
         'vehicle_id': vehicleId,
         'description': description ?? 'Emergencia reportada desde App Móvil',
+        'requires_tow_truck': requiresTowTruck,
+        if (towTruckCost != null) 'tow_truck_cost': towTruckCost,
       };
 
       if (localUuid != null) {

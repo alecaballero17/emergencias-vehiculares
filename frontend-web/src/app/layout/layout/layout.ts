@@ -21,6 +21,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   isAdmin = false;
   menuItems: any[] = [];
   wsConnected = false;
+  toasts: { id: number; title: string; message: string; type: string; icon: string }[] = [];
   private wsSubscription: Subscription | null = null;
   private statusSubscription: Subscription | null = null;
 
@@ -89,16 +90,33 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.wsSubscription = this.wsService.messages$.subscribe(msg => {
       console.log('[Layout WS] Message received:', msg);
       if (msg.type === 'new_incident_alert') {
-        this.unreadCount++;
+        console.log('[Layout WS] Alerta de nuevo incidente para refrescar listas disponibles.');
+        this.showToast(
+          '🚨 NUEVA EMERGENCIA SOS',
+          `Se ha reportado una emergencia de tipo ${this.getTypeLabel(msg.incident_type)} en ${msg.address || 'tu área'}.`,
+          'danger'
+        );
         this.showDesktopNotification(
-          '🚨 Nueva Emergencia SOS',
-          `Tipo: ${this.getTypeLabel(msg.incident_type)}. Dirección: ${msg.address || 'No especificada'}.`
+          '🚨 NUEVA EMERGENCIA SOS',
+          `Se ha reportado una emergencia de tipo ${this.getTypeLabel(msg.incident_type)} en ${msg.address || 'tu área'}.`
         );
       } else if (msg.type === 'notification') {
         this.showDesktopNotification(
           msg.title || 'Nueva Notificación',
           msg.message || ''
         );
+        
+        let toastType = 'info';
+        if (msg.notification_type === 'payment_received') toastType = 'success';
+        if (msg.notification_type === 'incident_cancelled') toastType = 'danger';
+        if (msg.notification_type === 'new_incident') toastType = 'danger';
+
+        this.showToast(
+          msg.title || 'Nueva Notificación',
+          msg.message || '',
+          toastType
+        );
+
         // Recargar el conteo de notificaciones no leídas
         this.ws.getNotifications(true).subscribe({
           next: n => this.unreadCount = n.length
@@ -115,6 +133,26 @@ export class LayoutComponent implements OnInit, OnDestroy {
       this.statusSubscription.unsubscribe();
     }
     this.wsService.disconnect();
+  }
+
+  showToast(title: string, message: string, type: string = 'info'): void {
+    const id = Date.now() + Math.random();
+    let icon = '🔔';
+    if (type === 'success') icon = '✅';
+    if (type === 'danger') icon = '🚨';
+    if (type === 'warning') icon = '⚠️';
+    
+    this.toasts.push({ id, title, message, type, icon });
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.dismissToast(id);
+    }, 6000);
+  }
+
+  dismissToast(id: number): void {
+    this.toasts = this.toasts.filter(t => t.id !== id);
+    this.cdr.detectChanges();
   }
 
   showDesktopNotification(title: string, body: string): void {

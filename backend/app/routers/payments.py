@@ -14,6 +14,8 @@ from app.schemas.incident import (
     PaymentCreate, PaymentResponse,
     PaymentIntentCreate, PaymentIntentResponse,
 )
+from app.services.notification_service import notify_user, notify_workshop
+from app.services.websocket_manager import ws_manager
 from app.utils.security import get_current_user
 
 BOL_TZ = pytz.timezone('America/La_Paz')
@@ -22,7 +24,7 @@ router = APIRouter(prefix="/api/payments", tags=["Pagos"])
 
 
 @router.post("/create-intent", response_model=PaymentIntentResponse, status_code=201)
-def create_payment_intent(
+async def create_payment_intent(
     data: PaymentIntentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -30,17 +32,23 @@ def create_payment_intent(
     """
     Crear intención de pago (simulación de pasarela Paralela).
     Genera un payment_intent_id único y registra el pago como pendiente.
+    Acepta pagos de incidentes finalizados O penalizaciones por cancelación.
     """
+    # Buscar incidente completado O cancelado con penalización
     incident = db.query(Incident).filter(
         Incident.id == data.incident_id,
         Incident.user_id == current_user.id,
         Incident.tenant_id == current_user.tenant_id,
-        Incident.status == IncidentStatus.COMPLETED,
+        Incident.status.in_([IncidentStatus.COMPLETED, IncidentStatus.CANCELLED]),
     ).first()
     if not incident:
-        raise HTTPException(status_code=404, detail="Incidente no encontrado o no finalizado")
+        raise HTTPException(status_code=404, detail="Incidente no encontrado o no finalizado/cancelado")
 
-    # Verificar si ya existe pago
+    # Si es cancelado, verificar que tenga penalización
+    if incident.status == IncidentStatus.CANCELLED and not incident.cancellation_fee:
+        raise HTTPException(status_code=400, detail="Este incidente cancelado no tiene penalización pendiente")
+
+    # Verificar si ya existe pago completado
     existing = db.query(Payment).filter(Payment.incident_id == data.incident_id).first()
     if existing and existing.payment_status == PaymentStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="El pago ya fue realizado")
@@ -76,7 +84,7 @@ def create_payment_intent(
 
 
 @router.post("/confirm/{payment_intent_id}", response_model=PaymentResponse)
-def confirm_payment(
+async def confirm_payment(
     payment_intent_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -96,25 +104,54 @@ def confirm_payment(
     payment.paid_at = datetime.now(BOL_TZ)
     db.commit()
     db.refresh(payment)
+
+    # Notificar al taller que el pago fue recibido
+    incident = db.query(Incident).filter(Incident.id == payment.incident_id).first()
+    if incident and incident.workshop_id:
+        is_penalty = incident.status == IncidentStatus.CANCELLED
+        title = "💰 Penalización pagada" if is_penalty else "💰 Pago recibido"
+        message = (
+            f"El cliente pagó la penalización de Bs. {payment.amount} por el incidente #{incident.id}"
+            if is_penalty
+            else f"Pago de Bs. {payment.amount} confirmado para el incidente #{incident.id}"
+        )
+        await notify_workshop(
+            db, incident.workshop_id, title, message,
+            "payment_received", tenant_id=current_user.tenant_id,
+        )
+
+        # Enviar por WebSocket también
+        payment_payload = {
+            "type": "payment_confirmed",
+            "incident_id": incident.id,
+            "amount": payment.amount,
+            "is_penalty": is_penalty,
+        }
+        await ws_manager.send_to_entity("workshop", incident.workshop_id, payment_payload)
+        await ws_manager.broadcast_to_incident(incident.id, payment_payload)
+
     return payment
 
 
 @router.post("/{incident_id}", response_model=PaymentResponse, status_code=201)
-def create_payment_direct(
+async def create_payment_direct(
     incident_id: int,
     data: PaymentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Pago directo (alternativa a flujo Paralela)."""
+    """Pago directo (alternativa a flujo Paralela). Acepta incidentes finalizados o cancelados con penalización."""
     incident = db.query(Incident).filter(
         Incident.id == incident_id,
         Incident.user_id == current_user.id,
         Incident.tenant_id == current_user.tenant_id,
-        Incident.status == IncidentStatus.COMPLETED,
+        Incident.status.in_([IncidentStatus.COMPLETED, IncidentStatus.CANCELLED]),
     ).first()
     if not incident:
-        raise HTTPException(status_code=404, detail="Incidente no encontrado o no completado")
+        raise HTTPException(status_code=404, detail="Incidente no encontrado o no completado/cancelado")
+
+    if incident.status == IncidentStatus.CANCELLED and not incident.cancellation_fee:
+        raise HTTPException(status_code=400, detail="Este incidente cancelado no tiene penalización pendiente")
 
     if db.query(Payment).filter(Payment.incident_id == incident_id, Payment.payment_status == PaymentStatus.COMPLETED).first():
         raise HTTPException(status_code=400, detail="El pago ya fue realizado")
@@ -134,6 +171,29 @@ def create_payment_direct(
     db.add(payment)
     db.commit()
     db.refresh(payment)
+
+    # Notificar al taller
+    if incident.workshop_id:
+        is_penalty = incident.status == IncidentStatus.CANCELLED
+        title = "💰 Penalización pagada" if is_penalty else "💰 Pago recibido"
+        message = (
+            f"El cliente pagó la penalización de Bs. {data.amount} por el incidente #{incident_id}"
+            if is_penalty
+            else f"Pago de Bs. {data.amount} confirmado para el incidente #{incident_id}"
+        )
+        await notify_workshop(
+            db, incident.workshop_id, title, message,
+            "payment_received", tenant_id=current_user.tenant_id,
+        )
+        payment_payload = {
+            "type": "payment_confirmed",
+            "incident_id": incident_id,
+            "amount": data.amount,
+            "is_penalty": is_penalty,
+        }
+        await ws_manager.send_to_entity("workshop", incident.workshop_id, payment_payload)
+        await ws_manager.broadcast_to_incident(incident_id, payment_payload)
+
     return payment
 
 

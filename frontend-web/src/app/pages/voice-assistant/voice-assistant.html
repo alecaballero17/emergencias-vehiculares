@@ -1,8 +1,8 @@
 <div class="page animate-in">
   <div class="page-header">
     <div>
-      <h2>Asistente de Voz Inteligente (Groq IA)</h2>
-      <p class="text-secondary">Pide reportes operativos y financieros hablando de forma natural y escucha las respuestas del sistema.</p>
+      <h2>Reportes y Asistente de Voz (Groq IA)</h2>
+      <p class="text-secondary">Pide reportes por voz o descárgalos directamente en PDF, HTML o Excel.</p>
     </div>
   </div>
 
@@ -15,7 +15,14 @@
             {{ msg.sender === 'user' ? '👨' : '🤖' }}
           </div>
           <div class="bubble-content">
-            <p>{{ msg.text }}</p>
+            <p style="white-space: pre-wrap;">{{ msg.text }}</p>
+            @if (msg.sender === 'ai' && !msg.text.startsWith('❌')) {
+              <div class="bubble-actions" style="margin-top: 12px; display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 11px;" (click)="exportPdf(msg)">🖨️ PDF</button>
+                <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 11px;" (click)="exportHtml(msg)">🌐 HTML</button>
+                <button class="btn btn-ghost btn-sm" style="padding: 4px 8px; font-size: 11px;" (click)="exportExcel(msg)">📊 Excel</button>
+              </div>
+            }
           </div>
         </div>
       }
@@ -30,6 +37,152 @@
               <span></span>
             </div>
           </div>
+        </div>
+      }
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Report Export Section -->
+    <!-- ============================================================ -->
+    <div class="export-section">
+      <div class="export-header" (click)="toggleExportSection()">
+        <div class="export-title">
+          <span class="export-icon">📥</span>
+          <span>Descargar Reportes del Sistema</span>
+        </div>
+        <span class="export-toggle" [class.open]="showExportSection">▾</span>
+      </div>
+
+      @if (showExportSection) {
+        <div class="export-body">
+          <!-- Incidents Report -->
+          <div class="export-card">
+            <div class="export-card-header">
+              <span class="export-card-icon">🚨</span>
+              <div>
+                <h4>Reporte de Incidentes</h4>
+                <p>Historial de emergencias atendidas</p>
+              </div>
+            </div>
+            <div class="export-card-controls">
+              <label class="days-label">
+                <span>Período:</span>
+                <div class="days-input-wrapper">
+                  <input type="number" [(ngModel)]="daysIncidents" min="1" max="365" class="days-input" />
+                  <span class="days-suffix">días</span>
+                </div>
+              </label>
+              <div class="export-buttons">
+                <button 
+                  class="export-btn export-btn-pdf" 
+                  (click)="downloadIncidentsReport('pdf')"
+                  [disabled]="downloadingReport !== null"
+                  [class.downloading]="isDownloading('incidents-pdf')"
+                >
+                  @if (isDownloading('incidents-pdf')) {
+                    <span class="spinner"></span>
+                  } @else {
+                    📄
+                  }
+                  PDF
+                </button>
+                <button 
+                  class="export-btn export-btn-html" 
+                  (click)="downloadIncidentsReport('html')"
+                  [disabled]="downloadingReport !== null"
+                  [class.downloading]="isDownloading('incidents-html')"
+                >
+                  @if (isDownloading('incidents-html')) {
+                    <span class="spinner"></span>
+                  } @else {
+                    🌐
+                  }
+                  HTML
+                </button>
+                <button 
+                  class="export-btn export-btn-excel" 
+                  (click)="downloadIncidentsReport('excel')"
+                  [disabled]="downloadingReport !== null"
+                  [class.downloading]="isDownloading('incidents-excel')"
+                >
+                  @if (isDownloading('incidents-excel')) {
+                    <span class="spinner"></span>
+                  } @else {
+                    📊
+                  }
+                  Excel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Financial Report -->
+          <div class="export-card">
+            <div class="export-card-header">
+              <span class="export-card-icon">💰</span>
+              <div>
+                <h4>Reporte Financiero</h4>
+                <p>Ingresos, pagos y facturación</p>
+              </div>
+            </div>
+            <div class="export-card-controls">
+              <label class="days-label">
+                <span>Período:</span>
+                <div class="days-input-wrapper">
+                  <input type="number" [(ngModel)]="daysFinancial" min="1" max="365" class="days-input" />
+                  <span class="days-suffix">días</span>
+                </div>
+              </label>
+              <div class="export-buttons">
+                <button 
+                  class="export-btn export-btn-pdf" 
+                  (click)="downloadFinancialReport('pdf')"
+                  [disabled]="downloadingReport !== null"
+                  [class.downloading]="isDownloading('financial-pdf')"
+                >
+                  @if (isDownloading('financial-pdf')) {
+                    <span class="spinner"></span>
+                  } @else {
+                    📄
+                  }
+                  PDF
+                </button>
+                <button 
+                  class="export-btn export-btn-html" 
+                  (click)="downloadFinancialReport('html')"
+                  [disabled]="downloadingReport !== null"
+                  [class.downloading]="isDownloading('financial-html')"
+                >
+                  @if (isDownloading('financial-html')) {
+                    <span class="spinner"></span>
+                  } @else {
+                    🌐
+                  }
+                  HTML
+                </button>
+                <button 
+                  class="export-btn export-btn-excel" 
+                  (click)="downloadFinancialReport('excel')"
+                  [disabled]="downloadingReport !== null"
+                  [class.downloading]="isDownloading('financial-excel')"
+                >
+                  @if (isDownloading('financial-excel')) {
+                    <span class="spinner"></span>
+                  } @else {
+                    📊
+                  }
+                  Excel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Message -->
+          @if (reportStatusMessage) {
+            <div class="export-status" [class.success]="reportStatusType === 'success'" [class.error]="reportStatusType === 'error'">
+              {{ reportStatusMessage }}
+            </div>
+          }
         </div>
       }
     </div>
@@ -78,3 +231,4 @@
     </div>
   </div>
 </div>
+

@@ -120,6 +120,7 @@ class IncidentCreate(BaseModel):
     address: Optional[str] = None
     description: Optional[str] = None
     local_uuid: Optional[str] = None  # Para idempotencia offline
+    requires_tow_truck: Optional[bool] = False
 
 
 class IncidentUpdate(BaseModel):
@@ -148,9 +149,9 @@ class IncidentResponse(BaseModel):
     ai_cost_estimate_min: Optional[float]
     ai_cost_estimate_max: Optional[float]
     estimated_arrival_minutes: Optional[int]
-    final_cost: Optional[float]
     cancellation_fee: Optional[float]
     local_uuid: Optional[str]
+    requires_tow_truck: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
     searching_at: Optional[datetime]

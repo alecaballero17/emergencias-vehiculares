@@ -8,6 +8,7 @@ import '../core/app_theme.dart';
 import '../services/vehicle_service.dart';
 import '../services/incident_service.dart';
 import '../services/local_notification_service.dart';
+import '../services/report_export_service.dart';
 import '../models/vehicle_model.dart';
 import 'login_screen.dart';
 import 'report_incident_screen.dart';
@@ -20,6 +21,8 @@ import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import 'analytics_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -98,13 +101,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          final isPaid = last['payment'] != null;
+          final payment = last['payment'];
+          final isPaid = payment != null && payment['payment_status'] == 'completed';
+          final hasCancellationFee = last['cancellation_fee'] != null && (last['cancellation_fee'] as num) > 0;
+
           if (status == 'pendiente' ||
               status == 'buscando_taller' ||
               status == 'taller_asignado' ||
               status == 'en_camino' ||
               status == 'en_atencion' ||
-              (status == 'finalizado' && !isPaid)) {
+              (status == 'finalizado' && !isPaid) ||
+              (status == 'cancelado' && hasCancellationFee && !isPaid)) {
             _activeIncident = last;
           } else {
             _activeIncident = null; // Ya no hay incidente activo
@@ -471,11 +478,13 @@ class _VoiceAssistantBottomSheetState extends State<VoiceAssistantBottomSheet> {
   final _record = AudioRecorder();
   final _flutterTts = FlutterTts();
   final _incidentService = IncidentService();
+  final _reportExportService = ReportExportService();
   
   bool _isRecording = false;
   bool _isLoading = false;
   String _userText = '';
   String _aiResponse = '¡Hola! Presiona el botón y habla para pedir un reporte operativo o financiero.';
+  String? _downloadingKey;
 
   @override
   void initState() {
@@ -535,6 +544,189 @@ class _VoiceAssistantBottomSheetState extends State<VoiceAssistantBottomSheet> {
     }
   }
 
+  Future<void> _downloadReport(String type, String format) async {
+    final key = '${type}_$format';
+    setState(() => _downloadingKey = key);
+
+    String? filePath;
+    if (type == 'incidents') {
+      filePath = await _reportExportService.downloadIncidentsReport(format: format);
+    } else {
+      filePath = await _reportExportService.downloadFinancialReport(format: format);
+    }
+
+    if (!mounted) return;
+    setState(() => _downloadingKey = null);
+
+    final formatLabel = format == 'pdf' ? 'PDF' : format == 'html' ? 'HTML' : 'Excel';
+    final typeLabel = type == 'incidents' ? 'incidentes' : 'financiero';
+
+    if (filePath != null) {
+      // Intentar abrir el archivo de forma automática
+      try {
+        await OpenFilex.open(filePath);
+      } catch (e) {
+        debugPrint('Error al abrir el archivo: $e');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Reporte de $typeLabel ($formatLabel) descargado'),
+          action: SnackBarAction(
+            label: 'COMPARTIR',
+            textColor: Colors.white,
+            onPressed: () {
+              try {
+                Share.shareXFiles([XFile(filePath!)]);
+              } catch (e) {
+                debugPrint('Error al compartir el archivo: $e');
+              }
+            },
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error al descargar reporte de $typeLabel ($formatLabel)'),
+          backgroundColor: AppTheme.errorRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Widget _buildExportButton({
+    required String label,
+    required String icon,
+    required Color color,
+    required String type,
+    required String format,
+  }) {
+    final key = '${type}_$format';
+    final isDownloading = _downloadingKey == key;
+    final isDisabled = _downloadingKey != null;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: isDisabled ? null : () => _downloadReport(type, format),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDisabled && !isDownloading
+                  ? [Colors.grey[800]!, Colors.grey[700]!]
+                  : [color, color.withOpacity(0.7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isDownloading
+                ? [
+                    BoxShadow(
+                      color: color.withOpacity(0.4),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: isDownloading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    '$icon $label',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportCard(String title, String subtitle, String emoji, String type) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildExportButton(
+                label: 'PDF',
+                icon: '📄',
+                color: const Color(0xFFEF4444),
+                type: type,
+                format: 'pdf',
+              ),
+              const SizedBox(width: 8),
+              _buildExportButton(
+                label: 'HTML',
+                icon: '🌐',
+                color: const Color(0xFFF59E0B),
+                type: type,
+                format: 'html',
+              ),
+              const SizedBox(width: 8),
+              _buildExportButton(
+                label: 'Excel',
+                icon: '📊',
+                color: const Color(0xFF10B981),
+                type: type,
+                format: 'excel',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -545,155 +737,201 @@ class _VoiceAssistantBottomSheetState extends State<VoiceAssistantBottomSheet> {
           topRight: Radius.circular(20),
         ),
       ),
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(10),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Asistente de Voz Groq IA',
-            style: GoogleFonts.outfit(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primaryNeon,
+            const SizedBox(height: 20),
+            Text(
+              'Reportes y Asistente de Voz',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryNeon,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Pide reportes hablando con naturalidad',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-          ),
-          const SizedBox(height: 30),
-          
-          // Burbuja de conversación
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.cardBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[900]!),
+            const SizedBox(height: 6),
+            const Text(
+              'Descarga reportes o pide uno por voz',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 24),
+
+            // ========== Export Section ==========
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '📥 Descargar Reportes',
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildReportCard(
+              'Reporte de Incidentes',
+              'Historial de emergencias',
+              '🚨',
+              'incidents',
+            ),
+            const SizedBox(height: 10),
+            _buildReportCard(
+              'Reporte Financiero',
+              'Ingresos y pagos',
+              '💰',
+              'financial',
+            ),
+            const SizedBox(height: 24),
+
+            // ========== Divider ==========
+            Row(
               children: [
-                if (_userText.isNotEmpty) ...[
+                Expanded(child: Divider(color: Colors.grey[800])),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'o pide por voz',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                ),
+                Expanded(child: Divider(color: Colors.grey[800])),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Burbuja de conversación
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[900]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_userText.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 12,
+                          backgroundColor: AppTheme.accentNeon,
+                          child: Icon(Icons.person, size: 12, color: Colors.black),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Tú dijiste:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accentNeon.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _userText,
+                      style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                    ),
+                    const Divider(height: 20, color: Colors.grey),
+                  ],
                   Row(
                     children: [
                       const CircleAvatar(
                         radius: 12,
-                        backgroundColor: AppTheme.accentNeon,
-                        child: Icon(Icons.person, size: 12, color: Colors.black),
+                        backgroundColor: AppTheme.primaryNeon,
+                        child: Icon(Icons.android, size: 12, color: Colors.black),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Tú dijiste:',
+                        'Asistente:',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.accentNeon.withOpacity(0.8),
+                          color: AppTheme.primaryNeon.withOpacity(0.8),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _userText,
-                    style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
-                  ),
-                  const Divider(height: 20, color: Colors.grey),
+                  const SizedBox(height: 6),
+                  _isLoading
+                      ? const Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Analizando reporte...',
+                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          _aiResponse,
+                          style: const TextStyle(fontSize: 14, height: 1.4),
+                        ),
                 ],
-                Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 12,
-                      backgroundColor: AppTheme.primaryNeon,
-                      child: Icon(Icons.android, size: 12, color: Colors.black),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Asistente:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryNeon.withOpacity(0.8),
-                      ),
-                    ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            
+            // Botón micrófono
+            GestureDetector(
+              onTap: _isLoading ? null : _toggleRecording,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isRecording ? AppTheme.errorRed : AppTheme.cardBg,
+                  border: Border.all(
+                    color: _isRecording ? Colors.red : AppTheme.primaryNeon,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isRecording ? Colors.red : AppTheme.primaryNeon).withOpacity(0.3),
+                      blurRadius: _isRecording ? 20 : 10,
+                      spreadRadius: _isRecording ? 5 : 1,
+                    )
                   ],
                 ),
-                const SizedBox(height: 6),
-                _isLoading
-                    ? const Row(
-                        children: [
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Analizando reporte...',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        _aiResponse,
-                        style: const TextStyle(fontSize: 14, height: 1.4),
-                      ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 40),
-          
-          // Botón micrófono
-          GestureDetector(
-            onTap: _isLoading ? null : _toggleRecording,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _isRecording ? AppTheme.errorRed : AppTheme.cardBg,
-                border: Border.all(
-                  color: _isRecording ? Colors.red : AppTheme.primaryNeon,
-                  width: 2,
+                child: Icon(
+                  _isRecording ? Icons.mic : Icons.mic_none,
+                  size: 36,
+                  color: _isRecording ? Colors.white : AppTheme.primaryNeon,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isRecording ? Colors.red : AppTheme.primaryNeon).withOpacity(0.3),
-                    blurRadius: _isRecording ? 20 : 10,
-                    spreadRadius: _isRecording ? 5 : 1,
-                  )
-                ],
-              ),
-              child: Icon(
-                _isRecording ? Icons.mic : Icons.mic_none,
-                size: 36,
-                color: _isRecording ? Colors.white : AppTheme.primaryNeon,
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _isRecording ? 'Presiona para Detener y Procesar' : 'Toca el Micrófono para Hablar',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: _isRecording ? AppTheme.errorRed : AppTheme.textSecondary,
+            const SizedBox(height: 12),
+            Text(
+              _isRecording ? 'Presiona para Detener y Procesar' : 'Toca el Micrófono para Hablar',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: _isRecording ? AppTheme.errorRed : AppTheme.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

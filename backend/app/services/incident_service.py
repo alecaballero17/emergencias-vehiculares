@@ -61,6 +61,7 @@ async def create_incident(
         description=incident_data.description,
         status=IncidentStatus.PENDING,
         local_uuid=incident_data.local_uuid,
+        requires_tow_truck=incident_data.requires_tow_truck,
     )
     db.add(incident)
     db.flush()
@@ -134,6 +135,23 @@ async def create_incident(
             "cost_estimate_max": incident.ai_cost_estimate_max,
         }
         await ws_manager.broadcast_to_workshops(workshop_ids, alert_payload)
+
+        # Crear notificación persistente en la BD para cada taller candidato
+        from app.services.notification_service import notify_workshop
+        type_labels = {
+            "battery": "Batería", "tire": "Llanta", "crash": "Accidente",
+            "engine": "Motor", "other": "Otro"
+        }
+        type_str = type_labels.get(incident.incident_type.value, incident.incident_type.value)
+        for wid in workshop_ids:
+            await notify_workshop(
+                db,
+                workshop_id=wid,
+                title="🚨 Nueva Emergencia SOS",
+                message=f"Nueva emergencia #{incident.id} ({type_str}) reportada en {incident.address or 'tu área'}",
+                notification_type="new_incident",
+                tenant_id=tenant_id
+            )
 
     db.commit()
     db.refresh(incident)

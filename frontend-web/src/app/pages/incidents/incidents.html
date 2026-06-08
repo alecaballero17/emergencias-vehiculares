@@ -4,7 +4,10 @@
       <h2>Mis Incidentes</h2>
       <span class="page-subtitle">Historial de incidentes asignados a tu taller</span>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" style="display: flex; gap: 8px; align-items: center;">
+      <button class="btn btn-ghost btn-sm" (click)="exportPdf()" [disabled]="incidents.length === 0">🖨️ PDF</button>
+      <button class="btn btn-ghost btn-sm" (click)="exportHtml()" [disabled]="incidents.length === 0">🌐 HTML</button>
+      <button class="btn btn-ghost btn-sm" (click)="exportExcel()" [disabled]="incidents.length === 0">📊 Excel</button>
       <select class="form-input filter-select" [(ngModel)]="statusFilter" (change)="loadIncidents()">
         <option value="">Todos los estados</option>
         <option value="assigned">Asignado</option>

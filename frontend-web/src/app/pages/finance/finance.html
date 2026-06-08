@@ -80,9 +80,16 @@
     <!-- Transaction History -->
     @if (records.length > 0) {
       <div class="card animate-in" style="margin-top: 24px;">
-        <div class="section-header">
-          <h3>📜 Historial de Transacciones</h3>
-          <span class="badge badge-muted">{{ records.length }} registros</span>
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3>📜 Historial de Transacciones</h3>
+            <span class="badge badge-muted">{{ records.length }} registros</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-ghost btn-sm" (click)="exportPdf()">🖨️ PDF</button>
+            <button class="btn btn-ghost btn-sm" (click)="exportHtml()">🌐 HTML</button>
+            <button class="btn btn-ghost btn-sm" (click)="exportExcel()">📊 Excel</button>
+          </div>
         </div>
         <table class="table">
           <thead>

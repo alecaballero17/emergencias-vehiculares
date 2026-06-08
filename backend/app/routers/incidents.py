@@ -27,6 +27,7 @@ async def report_incident(
     address: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     local_uuid: Optional[str] = Form(None),
+    requires_tow_truck: bool = Form(False),
     images: list[UploadFile] = File(default=[]),
     audio: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
@@ -46,6 +47,7 @@ async def report_incident(
         address=address,
         description=description,
         local_uuid=local_uuid,
+        requires_tow_truck=requires_tow_truck,
     )
 
     incident = await create_incident(
@@ -168,5 +170,14 @@ async def cancel_incident(
             "incident_cancelled",
             tenant_id=current_user.tenant_id,
         )
+    else:
+        # Notificar a todos los talleres del tenant para que actualicen su listado
+        from app.models.workshop import Workshop
+        workshops = db.query(Workshop).filter(Workshop.tenant_id == current_user.tenant_id).all()
+        w_ids = [w.id for w in workshops]
+        await ws_manager.broadcast_to_workshops(w_ids, {
+            "type": "incident_cancelled_broadcast",
+            "incident_id": incident.id
+        })
 
     return incident

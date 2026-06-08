@@ -10,9 +10,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../core/app_theme.dart';
 import '../models/vehicle_model.dart';
+import '../models/incident_model.dart';
 import '../services/incident_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_service.dart';
+import '../services/tow_truck_service.dart';
 import 'quotations_screen.dart';
 
 class ReportIncidentScreen extends StatefulWidget {
@@ -181,9 +183,29 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         timeLimit: const Duration(seconds: 10),
       );
 
-      // 2. Enviar al Backend (verificar conexión primero)
+      // 2. Preguntar por grúa e incluir costo estimado si está disponible
+      bool requiresTowTruck = false;
+      double? towTruckCost;
       final isOnline = ConnectivityService().isOnline;
-      
+
+      if (isOnline) {
+        final selection = await _showTowTruckSelectionDialog(position);
+        if (selection == null) {
+          // El usuario canceló todo el reporte
+          return;
+        }
+        requiresTowTruck = selection['requiresTowTruck'] as bool;
+        towTruckCost = selection['towTruckCost'] as double?;
+      } else {
+        final bool? selectTow = await _showOfflineTowSelectionDialog();
+        if (selectTow == null) {
+          // El usuario canceló todo el reporte
+          return;
+        }
+        requiresTowTruck = selectTow;
+      }
+
+      // 3. Enviar al Backend (verificar conexión primero)
       if (!isOnline) {
         await OfflineService.instance.saveOfflineIncident(
           latitude: position.latitude,
@@ -194,6 +216,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
               : null,
           audioPath: _audioPath,
           imagePaths: _selectedImages.map((img) => img.path).toList(),
+          requiresTowTruck: requiresTowTruck,
+          towTruckCost: towTruckCost,
         );
         if (mounted) {
           _showOfflineSuccess();
@@ -210,6 +234,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
             : null,
         audioPath: _audioPath,
         imageFiles: _selectedImages,
+        requiresTowTruck: requiresTowTruck,
+        towTruckCost: towTruckCost,
       );
 
       if (result != null && mounted) {
@@ -238,6 +264,259 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
+  }
+
+  Future<Map<String, dynamic>?> _showTowTruckSelectionDialog(Position position) async {
+    final towService = TowTruckService();
+    TowTruckEstimate? estimate;
+    bool apiFailed = false;
+
+    // Mostrar loading modal
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          color: AppTheme.cardBg,
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppTheme.primaryNeon),
+                SizedBox(height: 16),
+                Text(
+                  'Calculando costo de grúa...',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      estimate = await towService.estimateTowCost(
+        clientLatitude: position.latitude,
+        clientLongitude: position.longitude,
+      );
+    } catch (e) {
+      debugPrint('Error calculando costo de grúa: $e');
+      apiFailed = true;
+    }
+
+    if (!mounted) return null;
+    Navigator.of(context).pop(); // Quitar loading dialog
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.cardBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.local_shipping, color: AppTheme.primaryNeon),
+                  SizedBox(width: 10),
+                  Text(
+                    '¿Necesitas Grúa?',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Puedes solicitar el servicio de grúa en tu reporte de emergencia actual.',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  if (apiFailed) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'No pudimos calcular la tarifa estimada para tu ubicación actual, pero puedes solicitarla igualmente.',
+                              style: TextStyle(color: Colors.orange, fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (estimate != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryNeon.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.primaryNeon.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Estimación de Grúa:',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                          ),
+                          const Divider(color: Colors.white24, height: 16),
+                          _buildEstimateRow('Distancia estimada:', '${estimate.distanceKm.toStringAsFixed(1)} km'),
+                          _buildEstimateRow('Tiempo de llegada:', '${estimate.estimatedTimeMinutes} min'),
+                          _buildEstimateRow('Tarifa Base:', 'BOB ${estimate.baseCost.toStringAsFixed(2)}'),
+                          _buildEstimateRow('Costo Distancia:', 'BOB ${estimate.distanceCost.toStringAsFixed(2)}'),
+                          const Divider(color: Colors.white24, height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Costo Total Grúa:',
+                                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryNeon, fontSize: 14),
+                              ),
+                              Text(
+                                'BOB ${estimate.totalCost.toStringAsFixed(2)}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryNeon, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  const Text(
+                    '¿Deseas agregar la grúa al reporte?',
+                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actionsOverflowButtonSpacing: 8,
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop({
+                      'requiresTowTruck': true,
+                      'towTruckCost': estimate?.totalCost ?? 0.0,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryNeon,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text(
+                    apiFailed ? 'Sí, Solicitar Grúa' : 'Sí, con Grúa (BOB ${estimate?.totalCost.toStringAsFixed(2)})',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop({
+                      'requiresTowTruck': false,
+                      'towTruckCost': null,
+                    });
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white30),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('No, solo Asistencia', style: TextStyle(fontSize: 12)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(null); // Cancelar envío
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.errorRed,
+                  ),
+                  child: const Text('Cancelar Reporte', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<bool?> _showOfflineTowSelectionDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off, color: Colors.orange),
+            SizedBox(width: 10),
+            Text(
+              '¿Necesitas Grúa?',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          '⚠️ Modo sin conexión activo. No podemos calcular el costo de la grúa en este momento, pero puedes solicitarla igualmente. Se cotizará cuando el reporte sea enviado.',
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryNeon,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Sí, Solicitar Grúa', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.white30),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('No, solo asistencia'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.errorRed,
+            ),
+            child: const Text('Cancelar Reporte'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstimateRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
   }
 
   void _showSuccess(int incidentId, String? description) {

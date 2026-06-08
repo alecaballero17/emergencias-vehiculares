@@ -14,6 +14,7 @@ from app.routers import (
     auth, users, vehicles, incidents, workshops,
     payments, notifications, quotations, analytics,
     tenants, ai_router, ws_router, backup, voice_assistant,
+    tow_truck, reports,
 )
 
 settings = get_settings()
@@ -61,6 +62,8 @@ app.include_router(tenants.router)
 app.include_router(ai_router.router)
 app.include_router(backup.router)
 app.include_router(voice_assistant.router)
+app.include_router(tow_truck.router)
+app.include_router(reports.router)
 
 # Registrar router WebSocket
 app.include_router(ws_router.router)

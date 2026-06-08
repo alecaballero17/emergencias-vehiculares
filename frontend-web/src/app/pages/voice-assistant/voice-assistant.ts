@@ -1,7 +1,10 @@
 import { Component, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { ExportUtil } from '../../utils/export-util';
+import { ReportService, ReportFormat } from '../../services/report.service';
 
 interface ChatMessage {
   sender: 'user' | 'ai';
@@ -11,7 +14,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-voice-assistant',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './voice-assistant.html',
   styleUrl: './voice-assistant.scss'
 })
@@ -26,7 +29,19 @@ export class VoiceAssistantComponent implements OnDestroy {
     { sender: 'ai', text: '¡Hola! Soy tu asistente de voz. Haz clic en el micrófono y pídeme un reporte. Por ejemplo: "Dame un reporte de incidentes", "dame un reporte financiero" o "cómo va el taller".' }
   ];
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  // Report export properties
+  daysIncidents = 30;
+  daysFinancial = 30;
+  downloadingReport: string | null = null;
+  reportStatusMessage = '';
+  reportStatusType: 'success' | 'error' | '' = '';
+  showExportSection = true;
+
+  constructor(
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef,
+    private reportService: ReportService
+  ) {}
 
   toggleRecording(): void {
     if (this.recording) {
@@ -132,5 +147,97 @@ export class VoiceAssistantComponent implements OnDestroy {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+  }
+
+  exportPdf(msg: ChatMessage): void {
+    const html = `<div style="font-size:14px; line-height:1.6; white-space:pre-wrap;">${msg.text}</div>`;
+    ExportUtil.exportToPdf('Reporte Asistente de Voz', html);
+  }
+
+  exportHtml(msg: ChatMessage): void {
+    const html = `<div style="font-size:14px; line-height:1.6; white-space:pre-wrap;">${msg.text}</div>`;
+    ExportUtil.exportToHtml('reporte_asistente_voz', 'Reporte Asistente de Voz', html);
+  }
+
+  exportExcel(msg: ChatMessage): void {
+    const headers = ['Reporte de Voz'];
+    const rows = msg.text.split('\n').map(line => [line]);
+    ExportUtil.exportToExcel('reporte_asistente_voz', headers, rows);
+  }
+
+  // === Report Export Methods ===
+
+  toggleExportSection(): void {
+    this.showExportSection = !this.showExportSection;
+  }
+
+  downloadIncidentsReport(format: ReportFormat): void {
+    const label = this.getFormatLabel(format);
+    this.downloadingReport = `incidents-${format}`;
+    this.reportStatusMessage = '';
+    this.reportStatusType = '';
+    this.cdr.detectChanges();
+
+    try {
+      this.reportService.downloadIncidentsReport(format, this.daysIncidents);
+      setTimeout(() => {
+        this.downloadingReport = null;
+        this.reportStatusMessage = `✅ Reporte de incidentes (${label}) descargado correctamente.`;
+        this.reportStatusType = 'success';
+        this.cdr.detectChanges();
+        this.clearStatusAfterDelay();
+      }, 2000);
+    } catch {
+      this.downloadingReport = null;
+      this.reportStatusMessage = `❌ Error al descargar reporte de incidentes (${label}).`;
+      this.reportStatusType = 'error';
+      this.cdr.detectChanges();
+      this.clearStatusAfterDelay();
+    }
+  }
+
+  downloadFinancialReport(format: ReportFormat): void {
+    const label = this.getFormatLabel(format);
+    this.downloadingReport = `financial-${format}`;
+    this.reportStatusMessage = '';
+    this.reportStatusType = '';
+    this.cdr.detectChanges();
+
+    try {
+      this.reportService.downloadFinancialReport(format, this.daysFinancial);
+      setTimeout(() => {
+        this.downloadingReport = null;
+        this.reportStatusMessage = `✅ Reporte financiero (${label}) descargado correctamente.`;
+        this.reportStatusType = 'success';
+        this.cdr.detectChanges();
+        this.clearStatusAfterDelay();
+      }, 2000);
+    } catch {
+      this.downloadingReport = null;
+      this.reportStatusMessage = `❌ Error al descargar reporte financiero (${label}).`;
+      this.reportStatusType = 'error';
+      this.cdr.detectChanges();
+      this.clearStatusAfterDelay();
+    }
+  }
+
+  isDownloading(key: string): boolean {
+    return this.downloadingReport === key;
+  }
+
+  private getFormatLabel(format: ReportFormat): string {
+    switch (format) {
+      case 'pdf': return 'PDF';
+      case 'html': return 'HTML';
+      case 'excel': return 'Excel';
+    }
+  }
+
+  private clearStatusAfterDelay(): void {
+    setTimeout(() => {
+      this.reportStatusMessage = '';
+      this.reportStatusType = '';
+      this.cdr.detectChanges();
+    }, 4000);
   }
 }

@@ -19,3 +19,6 @@ websockets==12.0
 firebase-admin==6.5.0
 geopy==2.4.1
 google-generativeai==0.7.2
+reportlab==4.0.9
+openpyxl==3.1.2
+jinja2==3.1.2

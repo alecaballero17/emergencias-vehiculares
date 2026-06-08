@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Enum as SAEnum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -39,6 +39,7 @@ class Incident(Base):
     estimated_arrival_minutes = Column(Integer, nullable=True)
     final_cost = Column(Float, nullable=True)
     cancellation_fee = Column(Float, nullable=True)
+    requires_tow_truck = Column(Boolean, default=False, nullable=True)
 
     # Idempotencia offline
     local_uuid = Column(String(100), nullable=True, unique=True, index=True)

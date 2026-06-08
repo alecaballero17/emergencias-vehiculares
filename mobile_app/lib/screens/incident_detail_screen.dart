@@ -112,10 +112,21 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
   }
 
   void _showPaymentFlow() {
+    final status = _incident?['status'] ?? '';
+    final cancellationFee = _incident?['cancellation_fee'];
     final cost = _incident?['final_cost'];
-    if (cost == null || cost == 0) {
+    
+    final double amount = (status == 'cancelado' && cancellationFee != null)
+        ? (cancellationFee as num).toDouble()
+        : (cost != null ? (cost as num).toDouble() : 0.0);
+
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El taller aún no ha registrado el costo del servicio.')),
+        SnackBar(
+          content: Text(status == 'cancelado'
+              ? 'No hay tarifa de cancelación registrada.'
+              : 'El taller aún no ha registrado el costo del servicio.'),
+        ),
       );
       return;
     }
@@ -125,8 +136,6 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
       );
       return;
     }
-
-    final amount = (cost as num).toDouble();
 
     switch (_selectedPaymentMethod) {
       case 'credit_card':
@@ -634,7 +643,13 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     final incidentType = _incident!['incident_type'] ?? 'other';
     final finalCost = _incident!['final_cost'];
     final payment = _incident!['payment'];
-    final isPaid = payment != null;
+    final isPaid = payment != null && payment['payment_status'] == 'completed';
+    final cancellationFee = _incident!['cancellation_fee'];
+    final showServicePayment = status == 'finalizado' && finalCost != null && (finalCost as num) > 0;
+    final showPenaltyPayment = status == 'cancelado' && cancellationFee != null && (cancellationFee as num) > 0;
+    final double paymentAmount = showServicePayment
+        ? (finalCost as num).toDouble()
+        : (showPenaltyPayment ? (cancellationFee as num).toDouble() : 0.0);
     final address = _incident!['address'];
     final aiConfidence = _incident!['ai_confidence'];
 
@@ -842,8 +857,8 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
 
             const SizedBox(height: 30),
 
-            // Sección de Pago (cuando el taller completó y puso precio)
-            if (status == 'finalizado' && finalCost != null && (finalCost as num) > 0) ...[
+            // Sección de Pago (cuando el taller completó y puso precio O cuando se canceló con penalización)
+            if (showServicePayment || showPenaltyPayment) ...[
               FadeInUp(
                 child: Container(
                   width: double.infinity,
@@ -862,7 +877,9 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        isPaid ? '✅ PAGADO' : '💳 Pago del Servicio',
+                        isPaid
+                            ? '✅ PAGADO'
+                            : (showPenaltyPayment ? '💳 Pago de Penalización' : '💳 Pago del Servicio'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -882,13 +899,13 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'Bs. ${(finalCost as num).toStringAsFixed(2)}',
+                              'Bs. ${paymentAmount.toStringAsFixed(2)}',
                               style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
-                              'Monto total del servicio',
-                              style: TextStyle(color: Colors.white54, fontSize: 13),
+                            Text(
+                              showPenaltyPayment ? 'Tarifa de reconocimiento por cancelación' : 'Monto total del servicio',
+                              style: const TextStyle(color: Colors.white54, fontSize: 13),
                             ),
                           ],
                         ),
@@ -969,7 +986,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                             incidentDescription: _incident?['description'] ?? _incident?['audio_transcription'],
                           ),
                         ),
-                      );
+                      ).then((_) => _loadDetail());
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentNeon,
@@ -994,7 +1011,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                             incidentId: widget.incidentId,
                           ),
                         ),
-                      );
+                      ).then((_) => _loadDetail());
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryNeon,

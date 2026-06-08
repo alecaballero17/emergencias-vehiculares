@@ -31,10 +31,10 @@ export class AvailableComponent implements OnInit, OnDestroy {
       this.refreshIncidentsSilently();
     }, 5000);
 
-    // Escuchar alertas de nuevos incidentes para recargar al instante
+    // Escuchar alertas de nuevos incidentes y cancelaciones para recargar al instante
     this.wsSubscription = this.wsService.messages$.subscribe(msg => {
-      if (msg.type === 'new_incident_alert') {
-        console.log('[Available SOS] Recibida nueva emergencia via WebSocket. Refrescando...');
+      if (msg.type === 'new_incident_alert' || msg.type === 'incident_cancelled_broadcast') {
+        console.log('[Available SOS] Recibida actualización via WebSocket. Refrescando...');
         this.refreshIncidentsSilently();
       }
     });

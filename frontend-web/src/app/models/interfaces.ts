@@ -59,9 +59,12 @@ export interface Payment {
   amount: number;
   commission_amount: number;
   commission_percent: number;
+  cancellation_fee?: number;
   payment_status: string;
-  payment_method: string;
+  payment_method: string | null;
+  payment_intent_id?: string | null;
   created_at: string;
+  paid_at?: string | null;
 }
 
 export interface Incident {
@@ -83,6 +86,7 @@ export interface Incident {
   technician_id: number | null;
   estimated_arrival_minutes: number | null;
   final_cost: number | null;
+  cancellation_fee?: number | null;
   created_at: string;
   updated_at: string;
   assigned_at: string | null;

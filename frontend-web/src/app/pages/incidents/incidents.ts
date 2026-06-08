@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { WorkshopService } from '../../services/workshop.service';
 import { Incident } from '../../models/interfaces';
+import { ExportUtil } from '../../utils/export-util';
 
 @Component({
   selector: 'app-incidents',
@@ -80,5 +81,59 @@ export class IncidentsComponent implements OnInit, OnDestroy {
       low: 'BAJA', medium: 'MEDIA', high: 'ALTA', critical: 'CRÍTICA'
     };
     return map[p] || p;
+  }
+
+  exportPdf(): void {
+    const html = this.compileIncidentsHtml();
+    ExportUtil.exportToPdf('Reporte de Incidentes Asignados', html);
+  }
+
+  exportHtml(): void {
+    const html = this.compileIncidentsHtml();
+    ExportUtil.exportToHtml('reporte_incidentes', 'Reporte de Incidentes Asignados', html);
+  }
+
+  exportExcel(): void {
+    const headers = ['ID', 'Tipo de Incidente', 'Prioridad', 'Estado', 'Fecha'];
+    const rows = this.incidents.map(inc => [
+      `#${inc.id}`,
+      this.getTypeLabel(inc.incident_type),
+      this.getPriorityLabel(inc.priority),
+      this.getStatusLabel(inc.status),
+      new Date(inc.created_at).toLocaleString('es-ES')
+    ]);
+    ExportUtil.exportToExcel('reporte_incidentes', headers, rows);
+  }
+
+  compileIncidentsHtml(): string {
+    let rowsHtml = '';
+    this.incidents.forEach(inc => {
+      rowsHtml += `
+        <tr>
+          <td>#${inc.id}</td>
+          <td>${this.getTypeLabel(inc.incident_type)}</td>
+          <td>${this.getPriorityLabel(inc.priority)}</td>
+          <td>${this.getStatusLabel(inc.status)}</td>
+          <td>${new Date(inc.created_at).toLocaleString('es-ES')}</td>
+        </tr>
+      `;
+    });
+
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo de Incidente</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
   }
 }

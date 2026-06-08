@@ -52,6 +52,8 @@ class OfflineService {
     String? description,
     String? audioPath,
     List<String>? imagePaths,
+    bool requiresTowTruck = false,
+    double? towTruckCost,
   }) async {
     final String localUuid = const Uuid().v4();
     final Map<String, dynamic> offlineData = {
@@ -62,6 +64,8 @@ class OfflineService {
       'description': description,
       'audioPath': audioPath,
       'imagePaths': imagePaths ?? [],
+      'requires_tow_truck': requiresTowTruck,
+      'tow_truck_cost': towTruckCost,
       'created_at': DateTime.now().toIso8601String(),
       'sync_status': 'pending', // pending, syncing, synced, error
     };
@@ -107,6 +111,8 @@ class OfflineService {
           audioPath: item['audioPath'] as String?,
           imageFiles: imageFiles,
           localUuid: id,
+          requiresTowTruck: item['requires_tow_truck'] as bool? ?? false,
+          towTruckCost: item['tow_truck_cost'] as double?,
         );
 
         if (result != null) {

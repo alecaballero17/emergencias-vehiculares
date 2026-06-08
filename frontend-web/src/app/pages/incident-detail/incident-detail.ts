@@ -90,15 +90,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
           this.mechanicLat = msg.latitude;
           this.mechanicLng = msg.longitude;
           this.updateMapMarkers();
-        } else if (msg.type === 'status_change') {
-          this.incident.status = msg.new_status;
-          this.cdr.detectChanges();
-          
-          if (msg.new_status === 'en_camino') {
-            this.startSimulation();
-          } else {
-            this.stopSimulation();
-          }
+        } else if (msg.type === 'status_change' || msg.type === 'payment_confirmed') {
+          this.refreshIncidentSilently(this.incident.id);
         }
       }
     });
