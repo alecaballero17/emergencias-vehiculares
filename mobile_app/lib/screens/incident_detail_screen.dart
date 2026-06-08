@@ -966,7 +966,7 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                         MaterialPageRoute(
                           builder: (context) => QuotationsScreen(
                             incidentId: widget.incidentId,
-                            incidentDescription: _incident?['description'],
+                            incidentDescription: _incident?['description'] ?? _incident?['audio_transcription'],
                           ),
                         ),
                       );

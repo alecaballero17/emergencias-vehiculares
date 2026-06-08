@@ -214,7 +214,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
       if (result != null && mounted) {
         final incidentId = result['id'] as int;
-        final description = result['description'] as String?;
+        final description = (result['description'] as String?) ?? (result['audio_transcription'] as String?);
         _showSuccess(incidentId, description);
       } else {
         throw Exception('Servidor no disponible');
