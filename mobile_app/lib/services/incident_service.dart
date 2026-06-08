@@ -323,7 +323,7 @@ class IncidentService {
       });
 
       final response = await _dio.post(
-        '${ApiConstants.baseUrl}/ai/voice-report',
+        '${ApiConstants.baseUrl}/ai/voice-report?client_context=true',
         data: formData,
         options: Options(
           headers: {

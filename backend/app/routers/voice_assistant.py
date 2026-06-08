@@ -25,8 +25,9 @@ GROQ_API_KEY = settings.groq_api_key
 @router.post("/voice-report")
 async def generate_voice_report(
     audio: UploadFile = File(...),
+    client_context: bool = False,
     db: Session = Depends(get_db),
-    current_entity: dict = Depends(get_current_entity),
+    current_entity: dict = Depends(current_entity_dependency if 'current_entity_dependency' in globals() else get_current_entity),
 ):
     """
     Recibe un archivo de audio, lo transcribe con Groq Whisper,
@@ -77,11 +78,26 @@ async def generate_voice_report(
         entity = current_entity["entity"]
         tenant_id = current_entity["tenant_id"]
 
+        # Determinar si forzamos el modo cliente (contexto móvil o rol no administrativo)
+        is_client_mode = client_context or (role not in [UserRole.ADMIN, UserRole.WORKSHOP_ADMIN])
+
         context_data = {}
 
-        if any(w in text_lower for w in ["finanz", "ganancia", "pago", "dinero", "monto", "cobr"]):
+        if any(w in text_lower for w in ["finanz", "ganancia", "pago", "dinero", "monto", "cobr", "costo", "gasto"]):
             # Reporte Financiero
-            if role == UserRole.WORKSHOP_ADMIN:
+            if is_client_mode:
+                payments = db.query(Payment).join(Incident).filter(
+                    Incident.user_id == entity.id,
+                    Payment.payment_status == PaymentStatus.COMPLETED,
+                    Payment.tenant_id == tenant_id,
+                ).all()
+                total_paid = sum(p.amount for p in payments)
+                context_data = {
+                    "report_type": "Financiero del Conductor/Cliente",
+                    "total_completed_payments": len(payments),
+                    "total_spent_bob": total_paid,
+                }
+            elif role == UserRole.WORKSHOP_ADMIN:
                 payments = db.query(Payment).join(Incident).filter(
                     Incident.workshop_id == entity.id,
                     Payment.payment_status == PaymentStatus.COMPLETED,
@@ -106,21 +122,43 @@ async def generate_voice_report(
                     "total_revenue_bob": total_earned,
                     "total_commission_bob": total_commission,
                 }
-            else:
-                payments = db.query(Payment).join(Incident).filter(
-                    Incident.user_id == entity.id,
-                    Payment.payment_status == PaymentStatus.COMPLETED,
-                    Payment.tenant_id == tenant_id,
-                ).all()
-                total_paid = sum(p.amount for p in payments)
-                context_data = {
-                    "report_type": "Financiero del Cliente",
-                    "total_completed_payments": len(payments),
-                    "total_spent_bob": total_paid,
-                }
-        elif any(w in text_lower for w in ["incidente", "emergencia", "choque", "batería", "llanta", "motor", "avería"]):
+        elif any(w in text_lower for w in ["incidente", "emergencia", "choque", "batería", "llanta", "motor", "avería", "reporte", "sos", "taller", "talleres"]):
             # Reporte de Incidentes
-            if role == UserRole.WORKSHOP_ADMIN:
+            if is_client_mode:
+                incidents_query = db.query(Incident).filter(
+                    Incident.user_id == entity.id,
+                    Incident.tenant_id == tenant_id
+                )
+                total_my_incidents = incidents_query.count()
+                my_active = incidents_query.filter(
+                    Incident.status.notin_([IncidentStatus.COMPLETED, IncidentStatus.CANCELLED])
+                ).count()
+                my_completed = incidents_query.filter(
+                    Incident.status == IncidentStatus.COMPLETED
+                ).count()
+                
+                # Obtener detalles del último incidente reportado
+                last_incident = incidents_query.order_by(Incident.created_at.desc()).first()
+                last_incident_info = None
+                if last_incident:
+                    workshop_name = "Ninguno asignado"
+                    if last_incident.workshop:
+                        workshop_name = last_incident.workshop.name
+                    last_incident_info = {
+                        "tipo": last_incident.incident_type.value if last_incident.incident_type else "Otro",
+                        "estado": last_incident.status.value,
+                        "taller_asignado": workshop_name,
+                        "fecha": last_incident.created_at.strftime("%Y-%m-%d %H:%M") if last_incident.created_at else ""
+                    }
+                
+                context_data = {
+                    "report_type": "Incidentes del Conductor/Cliente",
+                    "total_incidents_reported": total_my_incidents,
+                    "active_incidents_count": my_active,
+                    "completed_incidents_count": my_completed,
+                    "last_incident_details": last_incident_info
+                }
+            elif role == UserRole.WORKSHOP_ADMIN:
                 active_incidents = db.query(Incident).filter(
                     Incident.workshop_id == entity.id,
                     Incident.status.notin_([IncidentStatus.COMPLETED, IncidentStatus.CANCELLED]),
@@ -147,25 +185,20 @@ async def generate_voice_report(
                     "total_incidents_count": total_incidents,
                     "active_incidents_count": active_incidents,
                 }
-            else:
-                my_active = db.query(Incident).filter(
-                    Incident.user_id == entity.id,
-                    Incident.status.notin_([IncidentStatus.COMPLETED, IncidentStatus.CANCELLED]),
-                    Incident.tenant_id == tenant_id,
-                ).count()
-                my_completed = db.query(Incident).filter(
-                    Incident.user_id == entity.id,
-                    Incident.status == IncidentStatus.COMPLETED,
-                    Incident.tenant_id == tenant_id,
-                ).count()
-                context_data = {
-                    "report_type": "Incidentes del Cliente",
-                    "my_active_incidents": my_active,
-                    "my_completed_incidents": my_completed,
-                }
         else:
             # Resumen General
-            if role == UserRole.WORKSHOP_ADMIN:
+            if is_client_mode:
+                vehicles = db.query(Vehicle).filter(
+                    Vehicle.user_id == entity.id,
+                    Vehicle.tenant_id == tenant_id,
+                ).all()
+                context_data = {
+                    "report_type": "General del Conductor/Cliente",
+                    "client_name": entity.name,
+                    "registered_vehicles_count": len(vehicles),
+                    "vehicles_list": [f"{v.brand} {v.model} ({v.license_plate})" for v in vehicles]
+                }
+            elif role == UserRole.WORKSHOP_ADMIN:
                 context_data = {
                     "report_type": "General del Taller",
                     "workshop_name": entity.name,
@@ -178,16 +211,6 @@ async def generate_voice_report(
                     "report_type": "General de la Plataforma (Multi-tenant)",
                     "total_tenants": tenants_count,
                     "total_workshops": workshops_count,
-                }
-            else:
-                vehicles = db.query(Vehicle).filter(
-                    Vehicle.user_id == entity.id,
-                    Vehicle.tenant_id == tenant_id,
-                ).all()
-                context_data = {
-                    "report_type": "General del Cliente",
-                    "client_name": entity.name,
-                    "registered_vehicles_count": len(vehicles),
                 }
 
         # 4. Generar respuesta con Groq Llama3 basada en los datos reales del contexto
