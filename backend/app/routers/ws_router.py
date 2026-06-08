@@ -104,11 +104,13 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
     except WebSocketDisconnect:
         if entity_type and entity_id:
-            ws_manager.disconnect(entity_type, entity_id)
+            ws_manager.disconnect(entity_type, entity_id, websocket)
     except Exception as e:
         print(f"[WS] Error en conexion: {e}")
         if entity_type and entity_id:
             try:
-                ws_manager.disconnect(entity_type, entity_id)
+                ws_manager.disconnect(entity_type, entity_id, websocket)
             except Exception:
                 pass
+
+

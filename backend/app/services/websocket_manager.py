@@ -26,14 +26,17 @@ class ConnectionManager:
         self.active_connections[key] = ws
         print(f"[WS] Conectado: {key} (tenant={tenant_id})")
 
-    def disconnect(self, entity_type: str, entity_id: int):
-        """Elimina una conexión."""
+    def disconnect(self, entity_type: str, entity_id: int, ws: WebSocket):
+        """Elimina una conexión si coincide con la guardada."""
         key = self._key(entity_type, entity_id)
-        self.active_connections.pop(key, None)
-        # Limpiar suscripciones
-        for subs in self.incident_subscribers.values():
-            subs.discard(key)
-        print(f"[WS] Desconectado: {key}")
+        if self.active_connections.get(key) == ws:
+            self.active_connections.pop(key, None)
+            # Limpiar suscripciones
+            for subs in self.incident_subscribers.values():
+                subs.discard(key)
+            print(f"[WS] Desconectado: {key}")
+        else:
+            print(f"[WS] Ignorado desconexión obsoleta para {key}")
 
     def subscribe_to_incident(self, entity_type: str, entity_id: int, incident_id: int):
         """Suscribe una entidad a actualizaciones de un incidente."""
@@ -52,7 +55,8 @@ class ConnectionManager:
                 await ws.send_json(payload)
             except Exception as e:
                 print(f"[WS] Error enviando a {key}: {e}")
-                self.active_connections.pop(key, None)
+                if self.active_connections.get(key) == ws:
+                    self.active_connections.pop(key, None)
 
     async def broadcast_to_incident(self, incident_id: int, payload: dict):
         """Envía a todos los suscritos a un incidente."""
@@ -64,9 +68,10 @@ class ConnectionManager:
                 try:
                     await ws.send_json(payload)
                 except Exception:
-                    disconnected.append(key)
-        for key in disconnected:
-            self.active_connections.pop(key, None)
+                    disconnected.append((key, ws))
+        for key, ws in disconnected:
+            if self.active_connections.get(key) == ws:
+                self.active_connections.pop(key, None)
             subscribers.discard(key)
 
     async def broadcast_to_workshops(self, workshop_ids: list[int], payload: dict):
@@ -78,7 +83,8 @@ class ConnectionManager:
                 try:
                     await ws.send_json(payload)
                 except Exception:
-                    self.active_connections.pop(key, None)
+                    if self.active_connections.get(key) == ws:
+                        self.active_connections.pop(key, None)
 
     async def send_location_update(self, incident_id: int, latitude: float, longitude: float, eta_minutes: int | None = None):
         """Envía actualización de ubicación del mecánico a suscritos del incidente."""
