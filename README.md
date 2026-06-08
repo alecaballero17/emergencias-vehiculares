@@ -457,7 +457,7 @@ npm install
 
 ```bash
 cd ../mobile_app
-flutter pub get
+C:\src\flutter\bin\flutter.bat pub get
 ```
 
 ---
@@ -495,7 +495,7 @@ npm start
 
 ```bash
 cd mobile_app
-flutter run -d chrome
+C:\src\flutter\bin\flutter.bat run
 ```
 
 > 💡 También puedes ejecutar en un emulador Android o dispositivo físico con `flutter run`.
