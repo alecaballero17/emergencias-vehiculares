@@ -1,6 +1,9 @@
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../core/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/offline_service.dart';
@@ -133,49 +136,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _exportBackup() {
+  Future<void> _exportBackup() async {
     final String data = OfflineService.instance.exportLocalData();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Exportar Datos Locales (Hive)'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Copia el siguiente texto JSON para respaldar tus incidentes guardados sin conexión:'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: TextEditingController(text: data),
-                readOnly: true,
-                maxLines: 5,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'JSON de Respaldo',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: data));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copiado al portapapeles')),
-                );
-                Navigator.pop(context);
-              },
-              child: const Text('COPIAR'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CERRAR'),
-            ),
-          ],
+
+    try {
+      // Guardar localmente en la carpeta temporal
+      final tempDir = await getTemporaryDirectory();
+      final file = io.File('${tempDir.path}/respaldo_emergencias_offline.json');
+      await file.writeAsString(data);
+
+      // Compartir nativamente con share_plus (abre el menú para guardar archivo o enviar por redes)
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Respaldo de Incidentes Fuera de Línea - Emergencias Vehiculares',
+      );
+    } catch (e) {
+      // Fallback a copiar al portapapeles si compartir falla
+      Clipboard.setData(ClipboardData(text: data));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Copiado al portapapeles (Compartir falló)')),
         );
-      },
-    );
+      }
+    }
   }
 
   void _importBackup() {
@@ -184,25 +167,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Restaurar Datos Locales (Hive)'),
+          backgroundColor: AppTheme.cardBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Restaurar Datos (Importar)',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Pega el texto JSON de tu respaldo para restaurar los incidentes:'),
-              const SizedBox(height: 12),
+              const Text(
+                'Pega el contenido del archivo JSON de respaldo que exportaste anteriormente para restaurar la cola de incidentes offline.',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: textController,
-                maxLines: 5,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                maxLines: 6,
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.white),
+                decoration: InputDecoration(
                   hintText: 'Pega el JSON aquí...',
+                  hintStyle: const TextStyle(color: Colors.white24),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ],
           ),
           actions: [
             TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCELAR', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
               onPressed: () async {
                 final text = textController.text.trim();
                 if (text.isEmpty) return;
@@ -210,23 +212,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   await OfflineService.instance.importLocalData(text);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('✅ Datos locales restaurados con éxito')),
+                      const SnackBar(
+                        content: Text('✅ Incidentes locales restaurados con éxito'),
+                        backgroundColor: Colors.green,
+                      ),
                     );
                   }
                   Navigator.pop(context);
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('❌ JSON inválido o corrupto')),
+                      const SnackBar(
+                        content: Text('❌ Formato de respaldo JSON inválido'),
+                        backgroundColor: AppTheme.errorRed,
+                      ),
                     );
                   }
                 }
               },
-              child: const Text('RESTAURAR'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('CANCELAR'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryNeon,
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('RESTAURAR', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );

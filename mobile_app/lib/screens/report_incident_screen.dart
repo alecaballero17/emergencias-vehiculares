@@ -178,15 +178,26 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         throw Exception('Permisos de GPS denegados permanentemente.');
       }
 
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
+      final isOnline = ConnectivityService().isOnline;
+      Position position;
 
-      // 2. Preguntar por grúa e incluir costo estimado si está disponible
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: isOnline ? 8 : 3),
+        );
+      } catch (e) {
+        debugPrint("[Offline] Error al obtener posición en tiempo real: $e. Intentando última conocida...");
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null) {
+          position = lastKnown;
+        } else {
+          throw Exception('No se pudo obtener la ubicación GPS. Por favor activa la ubicación en tu dispositivo.');
+        }
+      }
+
       bool requiresTowTruck = false;
       double? towTruckCost;
-      final isOnline = ConnectivityService().isOnline;
 
       if (isOnline) {
         final selection = await _showTowTruckSelectionDialog(position);
