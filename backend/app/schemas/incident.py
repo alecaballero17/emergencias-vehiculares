@@ -149,6 +149,7 @@ class IncidentResponse(BaseModel):
     ai_cost_estimate_min: Optional[float]
     ai_cost_estimate_max: Optional[float]
     estimated_arrival_minutes: Optional[int]
+    final_cost: Optional[float] = None
     cancellation_fee: Optional[float]
     local_uuid: Optional[str]
     requires_tow_truck: Optional[bool] = False
