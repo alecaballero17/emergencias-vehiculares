@@ -334,3 +334,21 @@ def get_dashboard_summary(
         "cancelled_incidents": cancelled,
         "completion_rate": round((completed / total) * 100, 1) if total > 0 else 0,
     }
+
+
+@router.get("/dashboard-stats")
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_workshop: Workshop = Depends(get_current_workshop),
+):
+    """Retorna todos los indicadores y KPIs de analíticas en una sola llamada para optimizar el rendimiento."""
+    return {
+        "summary": get_dashboard_summary(db=db, current_workshop=current_workshop),
+        "assignment": get_avg_assignment_time(db=db, current_workshop=current_workshop),
+        "arrival": get_avg_arrival_time(db=db, current_workshop=current_workshop),
+        "types": get_incidents_by_type(db=db, current_workshop=current_workshop),
+        "workshops": get_top_workshops(db=db, current_workshop=current_workshop),
+        "heatmap": get_incident_heatmap(db=db, current_workshop=current_workshop),
+        "cancelled": get_cancelled_cases(db=db, current_workshop=current_workshop),
+        "sla": get_sla_compliance(db=db, current_workshop=current_workshop),
+    }

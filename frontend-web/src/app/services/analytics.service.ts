@@ -40,4 +40,8 @@ export class AnalyticsService {
   getSummary(): Observable<any> {
     return this.http.get(`${this.api}/summary`);
   }
+
+  getDashboardStats(): Observable<any> {
+    return this.http.get(`${this.api}/dashboard-stats`);
+  }
 }

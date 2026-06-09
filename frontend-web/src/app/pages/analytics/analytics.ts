@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AnalyticsService } from '../../services/analytics.service';
-import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-analytics',
@@ -42,16 +41,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   loadAllData(): void {
     this.loading = true;
-    forkJoin({
-      summary: this.analyticsService.getSummary(),
-      assignment: this.analyticsService.getAssignmentTime(),
-      arrival: this.analyticsService.getArrivalTime(),
-      types: this.analyticsService.getIncidentsByType(),
-      workshops: this.analyticsService.getTopWorkshops(),
-      heatmap: this.analyticsService.getIncidentHeatmap(),
-      cancelled: this.analyticsService.getCancelledCases(),
-      sla: this.analyticsService.getSlaCompliance()
-    }).subscribe({
+    this.analyticsService.getDashboardStats().subscribe({
       next: (res: any) => {
         this.summary = res.summary;
         this.assignmentTime = res.assignment;
