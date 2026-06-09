@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.workshop import Workshop
-from app.utils.security import get_current_user, get_current_workshop
+from app.utils.security import get_current_entity, get_current_workshop
 from app.services.report_generator import ReportGenerator
 
 router = APIRouter(prefix="/api/reports", tags=["Reportes"])
@@ -18,7 +18,7 @@ async def export_incidents_report(
     format: str = Query("pdf", regex="^(pdf|html|excel)$"),
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_entity: dict = Depends(get_current_entity),
 ):
     """
     Exporta reporte de incidentes en PDF, HTML o Excel.
@@ -33,7 +33,7 @@ async def export_incidents_report(
     try:
         content = ReportGenerator.generate_incidents_report(
             db,
-            current_user.tenant_id,
+            current_entity["tenant_id"],
             start_date,
             end_date,
             format=format,
@@ -64,7 +64,7 @@ async def export_financial_report(
     format: str = Query("pdf", regex="^(pdf|html|excel)$"),
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_entity: dict = Depends(get_current_entity),
 ):
     """
     Exporta reporte financiero en PDF, HTML o Excel.
@@ -79,7 +79,7 @@ async def export_financial_report(
     try:
         content = ReportGenerator.generate_financial_report(
             db,
-            current_user.tenant_id,
+            current_entity["tenant_id"],
             start_date,
             end_date,
             format=format,
