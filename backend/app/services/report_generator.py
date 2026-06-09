@@ -128,13 +128,19 @@ class ReportGenerator:
             return ReportGenerator._generate_html_financial(data)
         elif format == "excel":
             return ReportGenerator._generate_excel_financial(data)
-
     # ========== GENERADORES PDF ==========
     @staticmethod
     def _generate_pdf_incidents(data: list, start_date, end_date) -> bytes:
         """Genera PDF de incidentes."""
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch)
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch,
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch
+        )
         elements = []
 
         # Estilos
@@ -148,6 +154,25 @@ class ReportGenerator:
             alignment=TA_CENTER,
         )
 
+        cell_style = ParagraphStyle(
+            'CellText',
+            parent=styles['Normal'],
+            fontSize=7.5,
+            leading=9,
+            textColor=colors.HexColor('#2c3e50'),
+            alignment=TA_CENTER,
+        )
+        
+        header_style = ParagraphStyle(
+            'HeaderText',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=10,
+            textColor=colors.white,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+
         # Título
         title = Paragraph(
             f"REPORTE DE INCIDENTES<br/>{start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}",
@@ -158,33 +183,47 @@ class ReportGenerator:
 
         # Tabla
         if data:
-            headers = ["ID", "Usuario", "Vehículo", "Tipo", "Estado", "Prioridad", "Fecha", "Costo", "Penalización"]
-            table_data = [headers] + [
-                [
-                    str(row["id"]),
-                    row["user"][:20],
-                    row["vehicle"][:20],
-                    row["type"],
-                    row["status"],
-                    row["priority"],
-                    row["created_at"],
-                    f"BOB {row['cost']}",
-                    f"BOB {row['cancellation_fee']}" if row['cancellation_fee'] else "-",
-                ]
-                for row in data
+            headers = [
+                Paragraph("ID", header_style),
+                Paragraph("Usuario", header_style),
+                Paragraph("Vehículo", header_style),
+                Paragraph("Tipo", header_style),
+                Paragraph("Estado", header_style),
+                Paragraph("Prioridad", header_style),
+                Paragraph("Fecha", header_style),
+                Paragraph("Costo", header_style),
+                Paragraph("Penalización", header_style)
             ]
+            
+            table_data = [headers]
+            for row in data:
+                table_data.append([
+                    Paragraph(str(row["id"]), cell_style),
+                    Paragraph(row["user"], cell_style),
+                    Paragraph(row["vehicle"], cell_style),
+                    Paragraph(row["type"], cell_style),
+                    Paragraph(row["status"], cell_style),
+                    Paragraph(row["priority"], cell_style),
+                    Paragraph(row["created_at"], cell_style),
+                    Paragraph(f"BOB {row['cost']}", cell_style),
+                    Paragraph(f"BOB {row['cancellation_fee']}" if row['cancellation_fee'] else "-", cell_style),
+                ])
 
-            table = Table(table_data, colWidths=[0.5*inch]*9)
+            # Anchos proporcionales sumando 540 puntos (7.5 pulgadas de ancho imprimible)
+            col_widths = [30, 95, 80, 50, 60, 50, 80, 50, 45]
+            
+            table = Table(table_data, colWidths=col_widths)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f77b4')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+                ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
             ]))
             elements.append(table)
 
@@ -196,7 +235,14 @@ class ReportGenerator:
     def _generate_pdf_financial(data: dict) -> bytes:
         """Genera PDF de reporte financiero."""
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch)
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch,
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch
+        )
         elements = []
 
         styles = getSampleStyleSheet()
@@ -204,7 +250,7 @@ class ReportGenerator:
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=16,
-            textColor=colors.HexColor('#27ae60'),
+            textColor=colors.HexColor('#2e7d32'),
             spaceAfter=12,
             alignment=TA_CENTER,
         )
@@ -225,17 +271,22 @@ class ReportGenerator:
             ["Monto Neto", f"BOB {data['net_amount']}"],
         ]
 
-        summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
+        summary_table = Table(summary_data, colWidths=[220, 150])
         summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2e7d32')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 11),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, 0), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
         ]))
         elements.append(summary_table)
 
