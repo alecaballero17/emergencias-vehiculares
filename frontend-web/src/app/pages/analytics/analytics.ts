@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AnalyticsService } from '../../services/analytics.service';
 
@@ -29,7 +29,10 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     'other': '#10b981'
   };
 
-  constructor(private analyticsService: AnalyticsService) {}
+  constructor(
+    private analyticsService: AnalyticsService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadAllData();
@@ -54,6 +57,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         this.slaCompliance = res.sla;
 
         this.loading = false;
+        this.cdr.detectChanges();
         
         setTimeout(() => {
           this.loadLeaflet();
@@ -62,6 +66,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error loading analytics:', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

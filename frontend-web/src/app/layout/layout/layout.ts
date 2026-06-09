@@ -60,6 +60,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         { icon: '👨‍🔧', label: 'Técnicos', route: '/technicians' },
         { icon: '🔔', label: 'Notificaciones', route: '/notifications' },
         { icon: '💰', label: 'Finanzas', route: '/finance' },
+        { icon: '💾', label: 'Base de Datos', route: '/backup' },
         { icon: '🗣️', label: 'Asistente de Voz', route: '/voice-assistant' }
       );
     }
