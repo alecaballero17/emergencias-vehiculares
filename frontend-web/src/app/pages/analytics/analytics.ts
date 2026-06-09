@@ -60,7 +60,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
         
         setTimeout(() => {
-          this.loadLeaflet();
+          this.initMap();
         }, 100);
       },
       error: (err) => {
@@ -71,25 +71,9 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadLeaflet(): void {
-    if ((window as any).L) {
-      this.initMap();
-      return;
-    }
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => this.initMap();
-    document.body.appendChild(script);
-  }
-
   initMap(): void {
     const L = (window as any).L;
-    if (!L || !this.heatmapPoints.length) return;
+    if (!L) return;
 
     const container = document.getElementById('heatmap-container');
     if (!container) return;
@@ -104,20 +88,22 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    this.heatmapPoints.forEach((p: any) => {
-      let color = '#ef4444';
-      if (p.type === 'battery') color = '#6366f1';
-      if (p.type === 'tire') color = '#06b6d4';
-      if (p.type === 'engine') color = '#f59e0b';
-      if (p.type === 'other') color = '#10b981';
+    if (this.heatmapPoints && this.heatmapPoints.length > 0) {
+      this.heatmapPoints.forEach((p: any) => {
+        let color = '#ef4444';
+        if (p.type === 'battery') color = '#6366f1';
+        if (p.type === 'tire') color = '#06b6d4';
+        if (p.type === 'engine') color = '#f59e0b';
+        if (p.type === 'other') color = '#10b981';
 
-      L.circle([p.lat, p.lng], {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.4,
-        radius: 350
-      }).addTo(map).bindPopup(`Incidente: ${p.type}`);
-    });
+        L.circle([p.lat, p.lng], {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.4,
+          radius: 350
+        }).addTo(map).bindPopup(`Incidente: ${p.type}`);
+      });
+    }
   }
 
   getIncPercentage(count: number): number {
