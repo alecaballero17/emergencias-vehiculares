@@ -42,10 +42,10 @@
         @if (incident.status === 'buscando_taller' || incident.status === 'pendiente') {
           <button class="btn btn-primary" (click)="showQuoteModal = true">💰 Enviar Cotización</button>
           <button class="btn btn-outline" (click)="showAcceptModal = true">Aceptar Directo</button>
-          <button class="btn btn-ghost" (click)="showRejectModal = true" style="color: var(--danger-500)">Rechazar</button>
         }
         @if (incident.status === 'taller_asignado') {
           <button class="btn btn-success" (click)="markEnRoute()">🚗 Iniciar Viaje (En camino)</button>
+          <button class="btn btn-ghost" (click)="showRejectModal = true" style="color: var(--danger-500)">Rechazar</button>
         }
         @if (incident.status === 'en_camino') {
           <button class="btn btn-warning" (click)="markArrived()">📍 Reportar Llegada</button>
