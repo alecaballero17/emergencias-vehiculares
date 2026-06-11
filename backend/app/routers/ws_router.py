@@ -40,11 +40,14 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
             db = SessionLocal()
             try:
                 from app.models.workshop import Workshop
-                workshop = db.query(Workshop).first()
+                # Filtrar por tenant_id del JWT para conectar al taller correcto
+                workshop = db.query(Workshop).filter(Workshop.tenant_id == tenant_id).first()
                 if workshop:
                     entity_id = workshop.id
+                    print(f"[WS] Admin conectado como workshop_id={entity_id} (tenant={tenant_id})")
                 else:
-                    entity_id = 1
+                    # Fallback: usar entity_id del JWT directamente
+                    print(f"[WS] Admin sin taller en tenant={tenant_id}, usando entity_id={entity_id}")
             finally:
                 db.close()
         else:

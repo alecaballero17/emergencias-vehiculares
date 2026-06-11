@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 
 /**
  * Servicio de notificaciones push con manejo de Firebase Cloud Messaging
@@ -170,8 +170,8 @@ export class NotificationService {
   /**
    * Enviar token FCM al servidor
    */
-  private sendTokenToServer(token: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/notifications/register-token`, { token });
+  private sendTokenToServer(token: string): Promise<any> {
+    return firstValueFrom(this.http.post(`${this.apiUrl}/notifications/register-token`, { token }));
   }
 
   /**

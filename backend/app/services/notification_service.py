@@ -149,10 +149,25 @@ async def _send_push(token: str, title: str, body: str):
     """Envía notificación push via Firebase Cloud Messaging."""
     try:
         import firebase_admin
-        from firebase_admin import messaging
+        from firebase_admin import messaging, credentials
 
+        # Auto-inicializar Firebase si no está inicializado
         if not firebase_admin._apps:
-            raise Exception("Firebase no inicializado")
+            import os
+            from app.config import get_settings
+            settings = get_settings()
+            cred_path = settings.firebase_credentials_path
+            if os.path.exists(cred_path):
+                cred = credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred)
+                logger.info("Firebase inicializado automáticamente desde credenciales")
+            else:
+                logger.warning(
+                    f"Firebase credentials no encontradas en '{cred_path}'. "
+                    "Las notificaciones push nativas no estarán disponibles. "
+                    "Las notificaciones WebSocket seguirán funcionando."
+                )
+                return None
 
         message = messaging.Message(
             notification=messaging.Notification(title=title, body=body),
@@ -165,3 +180,4 @@ async def _send_push(token: str, title: str, body: str):
     except Exception as e:
         logger.error(f"Error en Firebase: {str(e)}")
         raise
+

@@ -1,6 +1,7 @@
 """Router de notificaciones: consulta y gestión de notificaciones."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.database import get_db
 from app.models.user import User
 from app.models.workshop import Workshop
@@ -9,6 +10,10 @@ from app.services.notification_service import get_user_notifications, get_worksh
 from app.utils.security import get_current_user, get_current_workshop
 
 router = APIRouter(prefix="/api/notifications", tags=["Notificaciones"])
+
+
+class RegisterTokenRequest(BaseModel):
+    token: str
 
 
 @router.get("/user", response_model=list[NotificationResponse])
@@ -38,3 +43,16 @@ async def mark_notification_read(notification_id: int, db: Session = Depends(get
     if not success:
         raise HTTPException(status_code=404, detail="Notificación no encontrada")
     return {"message": "Notificación marcada como leída"}
+
+
+@router.post("/register-token")
+async def register_fcm_token(
+    data: RegisterTokenRequest,
+    db: Session = Depends(get_db),
+    current_workshop: Workshop = Depends(get_current_workshop),
+):
+    """Registrar token FCM del taller para notificaciones push nativas."""
+    current_workshop.firebase_token = data.token
+    db.commit()
+    return {"message": "Token FCM registrado correctamente", "workshop_id": current_workshop.id}
+
