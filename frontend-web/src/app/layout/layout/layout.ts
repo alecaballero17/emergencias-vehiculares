@@ -5,6 +5,7 @@ import { AuthService } from '../../services/auth.service';
 import { WorkshopService } from '../../services/workshop.service';
 import { Workshop } from '../../models/interfaces';
 import { WebSocketService } from '../../services/websocket.service';
+import { RefreshService } from '../../services/refresh.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -21,14 +22,17 @@ export class LayoutComponent implements OnInit, OnDestroy {
   isAdmin = false;
   menuItems: any[] = [];
   wsConnected = false;
+  isOnline = true;
   toasts: { id: number; title: string; message: string; type: string; icon: string }[] = [];
   private wsSubscription: Subscription | null = null;
   private statusSubscription: Subscription | null = null;
+  private onlineSubscription: Subscription | null = null;
 
   constructor(
     private auth: AuthService, 
     private ws: WorkshopService,
     private wsService: WebSocketService,
+    private refreshService: RefreshService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -124,6 +128,30 @@ export class LayoutComponent implements OnInit, OnDestroy {
         });
       }
     });
+
+    // Monitorear conectividad offline/online
+    this.isOnline = this.refreshService.isOnline;
+    this.onlineSubscription = this.refreshService.isOnline$.subscribe(online => {
+      if (this.isOnline !== online) {
+        this.isOnline = online;
+        if (online) {
+          this.showToast(
+            '🌐 Conexión Restablecida',
+            'Se ha recuperado la conexión a internet. Los datos han sido actualizados.',
+            'success'
+          );
+          // Reconectar WebSocket al volver a tener internet
+          this.wsService.connect();
+        } else {
+          this.showToast(
+            '⚠️ Conexión Perdida',
+            'Estás trabajando sin conexión. Los datos mostrados podrían no estar actualizados.',
+            'warning'
+          );
+        }
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -132,6 +160,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
+    }
+    if (this.onlineSubscription) {
+      this.onlineSubscription.unsubscribe();
     }
     this.wsService.disconnect();
   }

@@ -93,6 +93,12 @@
       </div>
     </header>
 
+    @if (!isOnline) {
+      <div class="offline-banner">
+        <span>⚠️</span> Modo sin conexión activo. Algunos datos podrían estar desactualizados.
+      </div>
+    }
+
     <main class="main-content">
       <router-outlet />
     </main>

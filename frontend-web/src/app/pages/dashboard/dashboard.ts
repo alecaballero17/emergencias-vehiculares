@@ -1,9 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { WorkshopService } from '../../services/workshop.service';
+import { RefreshService } from '../../services/refresh.service';
 import { Incident } from '../../models/interfaces';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -12,12 +13,13 @@ import { forkJoin } from 'rxjs';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   availableCount = 0;
   activeCount = 0;
   completedCount = 0;
   recentIncidents: Incident[] = [];
   loading = false;
+  private refreshSubscription: Subscription | null = null;
 
   // KPIs reales calculados
   avgAssignmentMinutes = 0;
@@ -32,9 +34,28 @@ export class DashboardComponent implements OnInit {
   topWorkshops: any[] = [];
   incidentHeatpoints: any[] = [];
 
-  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
+  constructor(
+    private ws: WorkshopService, 
+    private refreshService: RefreshService,
+    private cd: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
+    this.loadData();
+
+    this.refreshSubscription = this.refreshService.refresh$.subscribe(() => {
+      console.log('[Dashboard] Conexión restablecida. Recargando métricas...');
+      this.loadData();
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshSubscription) {
+      this.refreshSubscription.unsubscribe();
+    }
+  }
+
+  loadData(): void {
     this.loading = true;
 
     // Safety timeout: force loading off after 5 seconds no matter what

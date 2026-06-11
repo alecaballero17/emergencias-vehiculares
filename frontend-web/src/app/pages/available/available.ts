@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { WorkshopService } from '../../services/workshop.service';
 import { Incident } from '../../models/interfaces';
 import { WebSocketService } from '../../services/websocket.service';
+import { RefreshService } from '../../services/refresh.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -18,11 +19,13 @@ export class AvailableComponent implements OnInit, OnDestroy {
   loading = true;
   private pollingInterval: any;
   private wsSubscription: Subscription | null = null;
+  private refreshSubscription: Subscription | null = null;
 
   constructor(
     private ws: WorkshopService, 
     private cd: ChangeDetectorRef,
-    private wsService: WebSocketService
+    private wsService: WebSocketService,
+    private refreshService: RefreshService
   ) {}
 
   ngOnInit(): void {
@@ -38,6 +41,12 @@ export class AvailableComponent implements OnInit, OnDestroy {
         this.refreshIncidentsSilently();
       }
     });
+
+    // Recargar automáticamente cuando se recupera la conexión a internet
+    this.refreshSubscription = this.refreshService.refresh$.subscribe(() => {
+      console.log('[Available SOS] Conexión restablecida. Recargando incidentes...');
+      this.loadIncidents();
+    });
   }
 
   ngOnDestroy(): void {
@@ -46,6 +55,9 @@ export class AvailableComponent implements OnInit, OnDestroy {
     }
     if (this.wsSubscription) {
       this.wsSubscription.unsubscribe();
+    }
+    if (this.refreshSubscription) {
+      this.refreshSubscription.unsubscribe();
     }
   }
 

@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { WorkshopService } from '../../services/workshop.service';
+import { RefreshService } from '../../services/refresh.service';
 import { Incident } from '../../models/interfaces';
 import { ExportUtil } from '../../utils/export-util';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-incidents',
@@ -18,19 +20,33 @@ export class IncidentsComponent implements OnInit, OnDestroy {
   loading = false;
   statusFilter = '';
   private pollingInterval: any;
+  private refreshSubscription: Subscription | null = null;
 
-  constructor(private ws: WorkshopService, private cd: ChangeDetectorRef) {}
+  constructor(
+    private ws: WorkshopService, 
+    private refreshService: RefreshService,
+    private cd: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadIncidents();
     this.pollingInterval = setInterval(() => {
       this.refreshIncidentsSilently();
     }, 5000);
+
+    // Recargar automáticamente cuando se recupera la conexión a internet
+    this.refreshSubscription = this.refreshService.refresh$.subscribe(() => {
+      console.log('[IncidentsComponent] Conexión restablecida. Recargando incidentes...');
+      this.loadIncidents();
+    });
   }
 
   ngOnDestroy(): void {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
+    }
+    if (this.refreshSubscription) {
+      this.refreshSubscription.unsubscribe();
     }
   }
 
